@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createFileStockRepository } from '../src/domain/stock/file-repository.mjs';
+import { createLocalApi } from '../src/platform/local-api.mjs';
+import { createWebServer } from '../src/platform/web-server.mjs';
+
+test('API exposes documents OCR analytics and graceful hardware status locally', async (t) => {
+  const dir=mkdtempSync(path.join(os.tmpdir(),'almox-api-1620-'));
+  const repository=createFileStockRepository({filePath:path.join(dir,'data.json')});
+  const ocrAdapter={available:()=>true,recognize:async()=>({provider:'fake',text:'NF 123',confidence:1,blocks:[],candidates:{invoiceNumber:'123'},reviewed:false})};
+  const hardwareAdapter={status:()=>({serial:'unavailable',printing:'unavailable'}),listPorts:async()=>[],readScale:async()=>({value:0,unit:'kg'}),print:async()=>({success:true})};
+  const api=createLocalApi({repository,backupDir:path.join(dir,'backups'),documentDir:path.join(dir,'documents'),ocrAdapter,hardwareAdapter});
+  const server=createWebServer({host:'127.0.0.1',port:0,apiHandler:api});
+  await server.start();t.after(()=>server.stop());const base=`http://127.0.0.1:${server.address().port}`;
+  const jsonPost=(url,body,token='')=>fetch(`${base}${url}`,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
+  await jsonPost('/api/auth/bootstrap',{password:'SenhaForte123'});
+  const login=await jsonPost('/api/auth/login',{login:'admin',password:'SenhaForte123'});const token=(await login.json()).token;
+  const headers={authorization:`Bearer ${token}`};
+  const post=async(url,body)=>{const response=await jsonPost(url,body,token);const payload=await response.json();assert.equal(response.ok,true,JSON.stringify(payload));return payload;};
+  const product=(await post('/api/catalog/products',{sku:'P16',name:'Produto 16',unit:'un',unitCost:10})).item;
+  await post('/api/stock/movements',{type:'ENTRY',productId:product.id,warehouseId:'main',quantity:5});
+  await post('/api/stock/movements',{type:'EXIT',productId:product.id,warehouseId:'main',quantity:2});
+  const created=(await post('/api/documents',{entityType:'product',entityId:product.id,kind:'note',originalName:'nota.txt',mimeType:'text/plain',contentBase64:Buffer.from('NF 123').toString('base64')})).item;
+  const listed=await fetch(`${base}/api/documents?entityType=product&entityId=${product.id}`,{headers}).then(r=>r.json());assert.equal(listed.items[0].id,created.id);
+  const download=await fetch(`${base}/api/documents/${created.id}/download`,{headers});assert.equal(await download.text(),'NF 123');
+  const ocr=await post(`/api/documents/${created.id}/ocr`,{});assert.equal(ocr.item.ocrResult.candidates.invoiceNumber,'123');
+  const abc=await fetch(`${base}/api/analytics/abc`,{headers}).then(r=>r.json());assert.equal(abc.items[0].productId,product.id);
+  const hardware=await fetch(`${base}/api/hardware/status`,{headers}).then(r=>r.json());assert.equal(hardware.serial,'unavailable');
+});
