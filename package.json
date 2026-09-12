@@ -1,12 +1,12 @@
 {
   "name": "artisys-almoxarifado",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "npm test && node --check apps/web/app.js && node --check apps/web/barcode.js && node --check src/platform/local-api.mjs && node --check src/platform/web-server.mjs && node --check src/domain/catalog/catalog-service.mjs && node --check src/domain/stock/file-repository.mjs && node --check src/domain/reports/report-service.mjs && node --check scripts/serve-web.mjs",
+    "check": "npm test && node --check apps/web/app.js && node --check apps/web/barcode.js && node --check src/platform/local-api.mjs && node --check src/platform/web-server.mjs && node --check src/domain/catalog/catalog-service.mjs && node --check src/domain/auth/auth-service.mjs && node --check src/domain/backup/backup-service.mjs && node --check src/domain/purchasing/purchasing-service.mjs && node --check src/domain/management/management-service.mjs && node --check src/domain/stock/advanced-stock-service.mjs && node --check src/domain/stock/file-repository.mjs && node --check src/domain/stock/repository.mjs && node --check src/domain/stock/schema.mjs && node --check src/domain/stock/stock-service.mjs && node --check src/domain/costs/cost-service.mjs && node --check src/domain/reports/report-service.mjs && node --check scripts/serve-web.mjs",
     "qa:validate": "node vendor/utilidades/modules/artisys-qa/src/cli.mjs validate --config ./artisys-qa.config.json",
     "security": "python vendor/utilidades/modules/artisys-security/security.py . --mode commit",
     "release:check": "node scripts/release-check.mjs",
