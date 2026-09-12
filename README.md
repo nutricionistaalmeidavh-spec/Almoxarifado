@@ -67,6 +67,7 @@ KPIs, posição de estoque, histórico, CSV, impressão/PDF e etiquetas.
 - Estoque físico × disponível, impedindo saídas, perdas, avarias e transferências de consumirem saldo reservado por outra operação.
 - Lote e validade por produto e depósito; o mesmo código de lote pode existir em depósitos distintos sem perder rastreabilidade.
 - Número de série com vínculo obrigatório ao produto, depósito e lote corretos; movimento serializado representa exatamente uma unidade.
+- Perda e avaria de item serializado encerram o ciclo da série (`LOST`/`DAMAGED`) e preservam a referência do movimento responsável.
 - Perda, avaria e devolução.
 - Transferência com estado `IN_TRANSIT` e confirmação de recebimento.
 - Transferências com lote/série usam obrigatoriamente o fluxo em trânsito; no recebimento a série muda de depósito e o lote equivalente é criado/reutilizado no destino.
