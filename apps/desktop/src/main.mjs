@@ -1,12 +1,16 @@
 import { createDesktopShellManifest } from '@artisys/desktop-shell';
-import { buildPocketBasePlan } from '@artisys/local-backend';
-import { buildRuntimePlan } from '../../../src/platform/runtime-plan.mjs';
+import { createAlmoxarifadoDesktopRuntime } from '../../../src/platform/desktop-runtime.mjs';
 
-export function createDesktopRuntime(dataDir, port = 8090) {
-  return buildRuntimePlan({
+export function createDesktopRuntime(dataDir, port = 4173, options = {}) {
+  return createAlmoxarifadoDesktopRuntime({
     dataDir,
+    host: options.host ?? '0.0.0.0',
     port,
-    desktopApi: { createDesktopShellManifest },
-    backendApi: { buildPocketBasePlan }
+    dependencies: {
+      ...options.dependencies,
+      desktopApi: options.dependencies?.desktopApi ?? { createDesktopShellManifest }
+    }
   });
 }
+
+export { createAlmoxarifadoDesktopRuntime };
