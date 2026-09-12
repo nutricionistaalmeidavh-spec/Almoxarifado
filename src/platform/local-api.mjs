@@ -10,15 +10,16 @@ import { createAdvancedStockService } from '../domain/stock/advanced-stock-servi
 import { createCostService } from '../domain/costs/cost-service.mjs';
 import { createBackupService } from '../domain/backup/backup-service.mjs';
 import { buildDashboard, buildLabels, buildMovementCsv, buildStockCsv } from '../domain/reports/report-service.mjs';
+import { createLocalApiExtensions } from './local-api-extensions.mjs';
 
 function sendJson(res, status, body) { const json=JSON.stringify(body); res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(json); }
 function sendText(res,status,body,contentType='text/plain; charset=utf-8'){res.writeHead(status,{'Content-Type':contentType,'Cache-Control':'no-store'});res.end(body);}
 async function readJson(req){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>2*1024*1024)throw new DomainError('PAYLOAD_TOO_LARGE','request body is too large');chunks.push(chunk);}if(!chunks.length)return{};try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new DomainError('INVALID_JSON','request body must be valid JSON');}}
 function tokenFrom(req){const value=req.headers.authorization||'';if(value.startsWith('Bearer '))return value.slice(7).trim();return String(req.headers['x-session-token']||'').trim();}
 function isLoopback(req){const address=String(req.socket?.remoteAddress||'');return address==='127.0.0.1'||address==='::1'||address==='::ffff:127.0.0.1';}
-function statusFor(error){if(error.code==='AUTH_REQUIRED'||error.code==='INVALID_CREDENTIALS')return 401;if(error.code==='FORBIDDEN')return 403;if(error.code==='AUTH_THROTTLED')return 429;if(/NOT_FOUND$/.test(error.code))return 404;return 400;}
+function statusFor(error){if(error.code==='AUTH_REQUIRED'||error.code==='INVALID_CREDENTIALS')return 401;if(error.code==='FORBIDDEN')return 403;if(error.code==='AUTH_THROTTLED')return 429;if(error.code==='PAYLOAD_TOO_LARGE'||error.code==='DOCUMENT_TOO_LARGE')return 413;if(error.code==='OCR_UNAVAILABLE'||error.code==='HARDWARE_UNAVAILABLE')return 503;if(/NOT_FOUND$/.test(error.code))return 404;return 400;}
 
-export function createLocalApi({ repository, publish=async()=>{}, backupDir = path.resolve('.data/backups') } = {}) {
+export function createLocalApi({ repository, publish=async()=>{}, backupDir = path.resolve('.data/backups'), documentDir = path.resolve('.data/documents'), ocrAdapter = null, hardwareAdapter = null } = {}) {
   if(!repository)throw new TypeError('repository is required');
   const catalog=createCatalogService({repository});
   const stock=createStockService({repository,publish});
@@ -29,6 +30,7 @@ export function createLocalApi({ repository, publish=async()=>{}, backupDir = pa
   const purchasing=createPurchasingService({repository,stock,recordCost:(input)=>costs.recordReceipt(input)});
   const advanced=createAdvancedStockService({repository,stock});
   const backup=createBackupService({repository,backupDir});
+  const extensions=createLocalApiExtensions({repository,auth,documentDir,ocrAdapter,hardwareAdapter});
   const publicUsers=()=>repository.listUsers().map(auth.publicUser);
   const bootstrap=(user)=>({
     user:auth.publicUser(user),
@@ -93,6 +95,7 @@ export function createLocalApi({ repository, publish=async()=>{}, backupDir = pa
       if(req.method==='GET'&&pathname==='/api/reports/stock.csv'){auth.require(token,'reports.export');return sendText(res,200,buildStockCsv(repository),'text/csv; charset=utf-8');}
       if(req.method==='GET'&&pathname==='/api/reports/movements.csv'){auth.require(token,'reports.export');return sendText(res,200,buildMovementCsv(repository),'text/csv; charset=utf-8');}
       if(req.method==='GET'&&pathname==='/api/reports/labels'){auth.require(token,'reports.export');return sendJson(res,200,{items:buildLabels(repository)});}
+      if(await extensions(req,res,url,token))return;
       return sendJson(res,404,{error:'NOT_FOUND'});
     }catch(error){if(error instanceof DomainError)return sendJson(res,statusFor(error),{error:error.code,message:error.message,details:error.details});console.error(error);return sendJson(res,500,{error:'INTERNAL_ERROR',message:'internal local server error'});}
   };
