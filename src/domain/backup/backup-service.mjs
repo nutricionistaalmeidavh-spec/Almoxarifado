@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync, unlinkSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { DomainError } from '../shared/domain-error.mjs';
@@ -14,21 +14,50 @@ function validatePayload(payload) {
   if (payload.state.warehouses.length === 0) throw new DomainError('INVALID_BACKUP', 'backup must contain at least one warehouse');
   return payload;
 }
+function normalizeAssets(assetDirs=[]) {
+  if (!Array.isArray(assetDirs)) throw new TypeError('assetDirs must be an array');
+  return assetDirs.map((item)=>{
+    const name=String(item?.name??'').trim(),sourceDir=String(item?.sourceDir??'').trim();
+    if(!/^[A-Za-z0-9._-]+$/.test(name))throw new TypeError('asset name is invalid');
+    if(!sourceDir)throw new TypeError('asset sourceDir is required');
+    return{name,sourceDir:path.resolve(sourceDir)};
+  });
+}
+function assetRoot(filePath){return filePath.replace(/\.json$/,'.assets');}
+function uniqueBackupPath(backupDir,createdAt,id){const prefix=`almoxarifado-${stamp(new Date(createdAt))}-${id}`;let index=0;while(true){const suffix=index?`-${index}`:'';const candidate=path.join(backupDir,`${prefix}${suffix}.json`);if(!existsSync(candidate))return candidate;index+=1;}}
 
-export function createBackupService({ repository, backupDir, now = () => new Date(), idFactory = randomUUID, maxBackups = 30 } = {}) {
+export function createBackupService({ repository, backupDir, now = () => new Date(), idFactory = randomUUID, maxBackups = 30, assetDirs = [] } = {}) {
   if (!repository?.exportState || !repository?.replaceState) throw new TypeError('repository with exportState/replaceState is required');
   if (typeof backupDir !== 'string' || !backupDir.trim()) throw new TypeError('backupDir is required');
   mkdirSync(backupDir, { recursive: true });
+  const assets=normalizeAssets(assetDirs);
+  for(const asset of assets)mkdirSync(asset.sourceDir,{recursive:true});
   const list = () => readdirSync(backupDir).filter((name) => name.endsWith('.json')).map((name) => ({ name, filePath: path.join(backupDir, name), size: statSync(path.join(backupDir, name)).size, modifiedAt: statSync(path.join(backupDir, name)).mtime.toISOString() })).sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
-  const prune = () => { for (const item of list().slice(maxBackups)) { try { unlinkSync(item.filePath); } catch {} } };
+  const removeSnapshot=(filePath)=>{try{unlinkSync(filePath);}catch{}try{rmSync(assetRoot(filePath),{recursive:true,force:true});}catch{}};
+  const prune = () => { for (const item of list().slice(maxBackups)) removeSnapshot(item.filePath); };
+  const snapshotAssets=(filePath)=>{
+    if(!assets.length)return;
+    const root=assetRoot(filePath),tmp=`${root}.tmp`;rmSync(tmp,{recursive:true,force:true});mkdirSync(tmp,{recursive:true});
+    try{for(const asset of assets){const destination=path.join(tmp,asset.name);if(existsSync(asset.sourceDir))cpSync(asset.sourceDir,destination,{recursive:true});else mkdirSync(destination,{recursive:true});}renameSync(tmp,root);}catch(error){rmSync(tmp,{recursive:true,force:true});rmSync(root,{recursive:true,force:true});throw error;}
+  };
+  const restoreAssets=(filePath)=>{
+    const root=assetRoot(filePath);if(!existsSync(root))return;
+    for(const asset of assets){const source=path.join(root,asset.name);if(!existsSync(source))continue;rmSync(asset.sourceDir,{recursive:true,force:true});mkdirSync(path.dirname(asset.sourceDir),{recursive:true});cpSync(source,asset.sourceDir,{recursive:true});}
+  };
+  const validateCurrentDocumentAssets=(payload)=>{
+    if(!assets.length||!Array.isArray(payload.state.documents))return;
+    const documentsAsset=assets.find((item)=>item.name==='documents');if(!documentsAsset)return;
+    const missing=payload.state.documents.filter((doc)=>!doc.deletedAt).filter((doc)=>doc.storageName&&!existsSync(path.join(documentsAsset.sourceDir,path.basename(doc.storageName))));
+    if(missing.length)throw new DomainError('DOCUMENT_ASSETS_REQUIRED','backup metadata references document files that are not available',{documentIds:missing.map((doc)=>doc.id)});
+  };
   return {
     create(reason = 'manual') {
       const createdAt = now().toISOString();
       const payload = { schemaVersion: SCHEMA_VERSION, id: idFactory(), createdAt, reason, state: repository.exportState() };
-      const filePath = path.join(backupDir, `almoxarifado-${stamp(new Date(createdAt))}-${payload.id}.json`);
+      const filePath = uniqueBackupPath(backupDir,createdAt,payload.id);
       const tmp = `${filePath}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-      renameSync(tmp, filePath); prune();
+      try{writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');snapshotAssets(filePath);renameSync(tmp, filePath);}catch(error){try{unlinkSync(tmp);}catch{}removeSnapshot(filePath);throw error;}
+      prune();
       return { ...payload, state: undefined, filePath, name: path.basename(filePath) };
     },
     list,
@@ -36,11 +65,12 @@ export function createBackupService({ repository, backupDir, now = () => new Dat
       const resolved = path.resolve(filePath); const base = path.resolve(backupDir);
       if (!resolved.startsWith(`${base}${path.sep}`)) throw new DomainError('INVALID_BACKUP_PATH', 'backup must be inside configured backup directory');
       const payload = validatePayload(JSON.parse(readFileSync(resolved, 'utf8')));
-      const safety = this.create('pre-restore'); repository.replaceState(payload.state);
-      return { restoredFrom: resolved, safetyBackup: safety.filePath, createdAt: payload.createdAt };
+      const before=repository.exportState();const safety = this.create('pre-restore');
+      try{repository.replaceState(payload.state);restoreAssets(resolved);return { restoredFrom: resolved, safetyBackup: safety.filePath, createdAt: payload.createdAt };}
+      catch(error){repository.replaceState(before);try{restoreAssets(safety.filePath);}catch{}throw error;}
     },
     exportPayload() { return { schemaVersion: SCHEMA_VERSION, createdAt: now().toISOString(), reason: 'export', state: repository.exportState() }; },
-    importPayload(payload) { validatePayload(payload); const safety = this.create('pre-import'); repository.replaceState(payload.state); return { safetyBackup: safety.filePath }; },
+    importPayload(payload) { validatePayload(payload);validateCurrentDocumentAssets(payload);const before=repository.exportState();const safety = this.create('pre-import');try{repository.replaceState(payload.state);return { safetyBackup: safety.filePath };}catch(error){repository.replaceState(before);throw error;} },
     startAutomatic({ intervalMs = 24 * 60 * 60 * 1000 } = {}) {
       if (!Number.isFinite(intervalMs) || intervalMs < 60_000) throw new RangeError('automatic backup interval must be at least 60 seconds');
       const timer = setInterval(() => { try { this.create('automatic'); } catch {} }, intervalMs); timer.unref?.(); return () => clearInterval(timer);
