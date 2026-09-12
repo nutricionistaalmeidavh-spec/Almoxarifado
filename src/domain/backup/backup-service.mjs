@@ -24,20 +24,22 @@ function normalizeAssets(assetDirs=[]) {
   });
 }
 function assetRoot(filePath){return filePath.replace(/\.json$/,'.assets');}
-function uniqueBackupPath(backupDir,createdAt,id){const prefix=`almoxarifado-${stamp(new Date(createdAt))}-${id}`;let index=0;while(true){const suffix=index?`-${index}`:'';const candidate=path.join(backupDir,`${prefix}${suffix}.json`);if(!existsSync(candidate))return candidate;index+=1;}}
+function uniqueBackupPath(backupDir,createdAt,id){const prefix=`almoxarifado-${stamp(new Date(createdAt))}-${id}`;let index=0;while(true){const suffix=index?`-${index}`:'';const candidate=path.join(backupDir,`${prefix}${suffix}.json`);if(!existsSync(candidate)&&!existsSync(assetRoot(candidate)))return candidate;index+=1;}}
 
-export function createBackupService({ repository, backupDir, now = () => new Date(), idFactory = randomUUID, maxBackups = 30, assetDirs = [] } = {}) {
+export function createBackupService({ repository, backupDir, now = () => new Date(), idFactory = randomUUID, maxBackups = 30, assetDirs = null } = {}) {
   if (!repository?.exportState || !repository?.replaceState) throw new TypeError('repository with exportState/replaceState is required');
   if (typeof backupDir !== 'string' || !backupDir.trim()) throw new TypeError('backupDir is required');
-  mkdirSync(backupDir, { recursive: true });
-  const assets=normalizeAssets(assetDirs);
+  const resolvedBackupDir=path.resolve(backupDir);
+  mkdirSync(resolvedBackupDir, { recursive: true });
+  const effectiveAssets=assetDirs??[{name:'documents',sourceDir:path.join(path.dirname(resolvedBackupDir),'documents')}];
+  const assets=normalizeAssets(effectiveAssets);
   for(const asset of assets)mkdirSync(asset.sourceDir,{recursive:true});
-  const list = () => readdirSync(backupDir).filter((name) => name.endsWith('.json')).map((name) => ({ name, filePath: path.join(backupDir, name), size: statSync(path.join(backupDir, name)).size, modifiedAt: statSync(path.join(backupDir, name)).mtime.toISOString() })).sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+  const list = () => readdirSync(resolvedBackupDir).filter((name) => name.endsWith('.json')).map((name) => ({ name, filePath: path.join(resolvedBackupDir, name), size: statSync(path.join(resolvedBackupDir, name)).size, modifiedAt: statSync(path.join(resolvedBackupDir, name)).mtime.toISOString() })).sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
   const removeSnapshot=(filePath)=>{try{unlinkSync(filePath);}catch{}try{rmSync(assetRoot(filePath),{recursive:true,force:true});}catch{}};
   const prune = () => { for (const item of list().slice(maxBackups)) removeSnapshot(item.filePath); };
   const snapshotAssets=(filePath)=>{
     if(!assets.length)return;
-    const root=assetRoot(filePath),tmp=`${root}.tmp`;rmSync(tmp,{recursive:true,force:true});mkdirSync(tmp,{recursive:true});
+    const root=assetRoot(filePath),tmp=`${root}.tmp`;rmSync(tmp,{recursive:true,force:true});rmSync(root,{recursive:true,force:true});mkdirSync(tmp,{recursive:true});
     try{for(const asset of assets){const destination=path.join(tmp,asset.name);if(existsSync(asset.sourceDir))cpSync(asset.sourceDir,destination,{recursive:true});else mkdirSync(destination,{recursive:true});}renameSync(tmp,root);}catch(error){rmSync(tmp,{recursive:true,force:true});rmSync(root,{recursive:true,force:true});throw error;}
   };
   const restoreAssets=(filePath)=>{
@@ -54,7 +56,7 @@ export function createBackupService({ repository, backupDir, now = () => new Dat
     create(reason = 'manual') {
       const createdAt = now().toISOString();
       const payload = { schemaVersion: SCHEMA_VERSION, id: idFactory(), createdAt, reason, state: repository.exportState() };
-      const filePath = uniqueBackupPath(backupDir,createdAt,payload.id);
+      const filePath = uniqueBackupPath(resolvedBackupDir,createdAt,payload.id);
       const tmp = `${filePath}.tmp`;
       try{writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');snapshotAssets(filePath);renameSync(tmp, filePath);}catch(error){try{unlinkSync(tmp);}catch{}removeSnapshot(filePath);throw error;}
       prune();
@@ -62,7 +64,7 @@ export function createBackupService({ repository, backupDir, now = () => new Dat
     },
     list,
     restore(filePath) {
-      const resolved = path.resolve(filePath); const base = path.resolve(backupDir);
+      const resolved = path.resolve(filePath); const base = resolvedBackupDir;
       if (!resolved.startsWith(`${base}${path.sep}`)) throw new DomainError('INVALID_BACKUP_PATH', 'backup must be inside configured backup directory');
       const payload = validatePayload(JSON.parse(readFileSync(resolved, 'utf8')));
       const before=repository.exportState();const safety = this.create('pre-restore');
