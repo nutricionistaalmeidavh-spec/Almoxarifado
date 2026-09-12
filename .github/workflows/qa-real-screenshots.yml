@@ -1,0 +1,52 @@
+name: QA Real Screenshots 1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - qa/real-screenshots-1.0.0
+    paths:
+      - '.qa-screenshot-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Capturar interface real
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Criar lock deterministico
+        shell: pwsh
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Instalar dependencias
+        shell: pwsh
+        run: npm ci
+
+      - name: Instalar Chromium Playwright
+        shell: pwsh
+        run: npx playwright install chromium
+
+      - name: Capturar prints reais
+        shell: pwsh
+        run: node scripts/capture-real-screenshots.mjs
+
+      - name: Publicar prints
+        uses: actions/upload-artifact@v4
+        with:
+          name: almoxarifado-real-screenshots-1.0.0
+          if-no-files-found: error
+          retention-days: 7
+          path: artifacts/real-screenshots/*.png
