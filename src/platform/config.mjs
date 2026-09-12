@@ -1,3 +1,5 @@
+import { createInventoryCollections } from '../domain/stock/schema.mjs';
+
 export function createPlatformConfig({ dataDir, port = 8090 } = {}) {
   if (typeof dataDir !== 'string' || dataDir.trim() === '') {
     throw new TypeError('dataDir is required');
@@ -17,7 +19,7 @@ export function createPlatformConfig({ dataDir, port = 8090 } = {}) {
       host: '0.0.0.0',
       port,
       allowRemote: true,
-      collections: []
+      collections: createInventoryCollections()
     },
     web: {
       localOnly: true,

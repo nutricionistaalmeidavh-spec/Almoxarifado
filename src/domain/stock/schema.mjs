@@ -1,0 +1,76 @@
+const field = (name, type, extra = {}) => ({ name, type, ...extra });
+
+const COLLECTIONS = Object.freeze([
+  {
+    name: 'categories',
+    fields: [field('name', 'text', { required: true }), field('active', 'bool', { default: true })]
+  },
+  {
+    name: 'suppliers',
+    fields: [
+      field('name', 'text', { required: true }), field('document', 'text'), field('phone', 'text'),
+      field('email', 'text'), field('active', 'bool', { default: true })
+    ]
+  },
+  {
+    name: 'warehouses',
+    fields: [field('code', 'text', { required: true, unique: true }), field('name', 'text', { required: true }), field('active', 'bool', { default: true })]
+  },
+  {
+    name: 'users',
+    fields: [field('name', 'text', { required: true }), field('login', 'text', { required: true, unique: true }), field('role', 'text', { required: true }), field('active', 'bool', { default: true })]
+  },
+  {
+    name: 'products',
+    fields: [
+      field('sku', 'text', { required: true, unique: true }), field('barcode', 'text', { unique: true }),
+      field('name', 'text', { required: true }), field('categoryId', 'relation', { collection: 'categories' }),
+      field('supplierId', 'relation', { collection: 'suppliers' }), field('unit', 'text', { required: true }),
+      field('minStock', 'number', { min: 0, default: 0 }), field('active', 'bool', { default: true })
+    ]
+  },
+  {
+    name: 'stock_balances',
+    fields: [
+      field('productId', 'relation', { collection: 'products', required: true }),
+      field('warehouseId', 'relation', { collection: 'warehouses', required: true }),
+      field('quantity', 'number', { min: 0, required: true }), field('updatedAt', 'date', { required: true })
+    ]
+  },
+  {
+    name: 'stock_movements',
+    fields: [
+      field('type', 'text', { required: true }), field('productId', 'relation', { collection: 'products', required: true }),
+      field('warehouseId', 'relation', { collection: 'warehouses', required: true }),
+      field('relatedWarehouseId', 'relation', { collection: 'warehouses' }), field('quantity', 'number', { min: 0, required: true }),
+      field('delta', 'number', { required: true }), field('before', 'number', { min: 0, required: true }),
+      field('after', 'number', { min: 0, required: true }), field('transferId', 'text'), field('inventoryId', 'text'),
+      field('reason', 'text'), field('userId', 'relation', { collection: 'users', required: true }), field('occurredAt', 'date', { required: true })
+    ]
+  },
+  {
+    name: 'inventory_sessions',
+    fields: [
+      field('warehouseId', 'relation', { collection: 'warehouses', required: true }), field('status', 'text', { required: true }),
+      field('startedAt', 'date', { required: true }), field('startedBy', 'relation', { collection: 'users', required: true }),
+      field('completedAt', 'date'), field('completedBy', 'relation', { collection: 'users' }), field('productCount', 'number', { min: 0 })
+    ]
+  },
+  {
+    name: 'inventory_counts',
+    fields: [
+      field('inventoryId', 'relation', { collection: 'inventory_sessions', required: true }),
+      field('productId', 'relation', { collection: 'products', required: true }),
+      field('expectedQuantity', 'number', { min: 0, required: true }), field('countedQuantity', 'number', { min: 0 }),
+      field('recountQuantity', 'number', { min: 0 }), field('finalQuantity', 'number', { min: 0 }),
+      field('divergence', 'number'), field('countedBy', 'relation', { collection: 'users' }), field('countedAt', 'date')
+    ]
+  }
+]);
+
+export function createInventoryCollections() {
+  return COLLECTIONS.map((collection) => ({
+    ...collection,
+    fields: collection.fields.map((item) => ({ ...item }))
+  }));
+}
