@@ -12,7 +12,7 @@
   },
   "environments": {
     "local": {
-      "baseURL": "http://127.0.0.1:8090"
+      "baseURL": "http://127.0.0.1:4173"
     }
   },
   "flows": {
