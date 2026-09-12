@@ -18,6 +18,14 @@ test('serial adapter lists ports and reads injected scale', async () => {
   assert.deepEqual(await adapter.readScale({portPath:'COM3',baudRate:9600}),{value:12.5,unit:'kg',raw:'12.500'});
 });
 
+test('thermal printing uses local printing driver when available', async () => {
+  const printingApi={createThermalPrinterDriver:()=>({print:async(job,settings)=>({success:true,job,mode:settings.mode})})};
+  const adapter=createHardwareAdapter({printingApi});
+  const result=await adapter.print('Etiqueta',{mode:'thermal',printerType:'epson',interface:'printer:auto'});
+  assert.equal(result.success,true);
+  assert.equal(result.mode,'thermal');
+});
+
 test('hardware settings are persisted with audit metadata', () => {
   const repository=createMemoryStockRepository({users:[{id:'admin',active:true}]});
   const service=createHardwareSettingsService({repository,idFactory:()=> 'hw-1',now:()=> '2026-09-12T17:00:00.000Z'});
