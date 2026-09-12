@@ -1,0 +1,146 @@
+name: Final Release 1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feat/entregas-21-24
+    tags:
+      - 'v*'
+    paths:
+      - '.release-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: almoxarifado-final-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  RELEASE_ARTIFACT: dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe
+
+jobs:
+  linux-gates:
+    name: Linux — tests, QA and security
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create deterministic lock for this release source
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Full test and syntax gate
+        run: npm run check
+
+      - name: QA configuration gate
+        run: npm run qa:validate
+
+      - name: Security gate
+        run: npm run security
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Release preflight
+        run: npm run release:check
+
+  windows-release:
+    name: Windows — build, install and usability smoke
+    needs: linux-gates
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create deterministic lock for this release source
+        shell: pwsh
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Install dependencies
+        shell: pwsh
+        run: npm ci
+
+      - name: Full Windows test and syntax gate
+        shell: pwsh
+        run: npm run check
+
+      - name: QA gate on release source
+        shell: pwsh
+        run: npm run qa:validate
+
+      - name: Security gate on release source
+        shell: pwsh
+        run: npm run security
+
+      - name: Install Playwright Chromium
+        shell: pwsh
+        run: npx playwright install chromium
+
+      - name: Build NSIS x64 installer
+        shell: pwsh
+        run: npm run build:win
+
+      - name: Verify installer exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path $env:RELEASE_ARTIFACT)) { throw "Missing installer: $env:RELEASE_ARTIFACT" }
+          Get-Item $env:RELEASE_ARTIFACT | Format-List FullName,Length,LastWriteTime
+
+      - name: Generate ephemeral smoke credentials
+        shell: pwsh
+        run: |
+          $password = ([guid]::NewGuid().ToString('N') + 'Aa1!')
+          "ALMOX_QA_PASSWORD=$password" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ALMOX_QA_SKU=QA-RELEASE-${{ github.run_id }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install, run and reinstall usability smoke
+        shell: pwsh
+        run: ./scripts/windows-installed-smoke.ps1 -InstallerPath $env:RELEASE_ARTIFACT
+
+      - name: Generate SHA-256 and release manifest
+        shell: pwsh
+        run: npm run release:manifest -- $env:RELEASE_ARTIFACT
+
+      - name: Final artifact release gate
+        shell: pwsh
+        env:
+          RELEASE_ARTIFACT_REQUIRED: '1'
+        run: npm run release:check
+
+      - name: Upload approved release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artisys-almoxarifado-1.0.0
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe
+            dist/SHA256SUMS.txt
+            dist/release-manifest.json
