@@ -1,6 +1,6 @@
 {
   "name": "artisys-almoxarifado",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "main": "apps/desktop/src/electron-main.mjs",
@@ -11,9 +11,12 @@
     "qa:validate": "node vendor/utilidades/modules/artisys-qa/src/cli.mjs validate --config ./artisys-qa.config.json",
     "security": "python vendor/utilidades/modules/artisys-security/security.py . --mode commit",
     "release:check": "node scripts/release-check.mjs",
+    "release:manifest": "node scripts/release-manifest.mjs",
     "artisys:verify": "node scripts/verify-artisys.mjs",
     "dev:web": "node scripts/serve-web.mjs",
-    "desktop": "electron apps/desktop/src/electron-main.mjs"
+    "desktop": "electron apps/desktop/src/electron-main.mjs",
+    "build:win": "electron-builder --win nsis --x64",
+    "smoke:release": "node scripts/release-smoke.mjs"
   },
   "dependencies": {
     "@artisys/desktop-shell": "file:vendor/utilidades/modules/artisys-desktop-shell",
@@ -30,6 +33,39 @@
   },
   "devDependencies": {
     "@artisys/release": "file:vendor/utilidades/modules/artisys-release",
-    "electron": "43.4.1"
+    "electron": "43.4.1",
+    "electron-builder": "26.15.3",
+    "playwright": "1.62.1"
+  },
+  "build": {
+    "appId": "br.com.artisys.almoxarifado",
+    "productName": "ArtiSys Almoxarifado",
+    "artifactName": "ArtiSys-Almoxarifado-Setup-${version}.${ext}",
+    "asar": true,
+    "files": [
+      "apps/**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": false
+    }
   }
 }
