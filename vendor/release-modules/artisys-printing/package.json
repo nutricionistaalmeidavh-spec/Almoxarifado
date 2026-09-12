@@ -1,0 +1,1 @@
+{"name":"@artisys/printing","version":"0.1.0","description":"Snapshot ArtiSys de transporte de impressao para release Almoxarifado","type":"commonjs","main":"./src/index.js","exports":{".":"./src/index.js"},"engines":{"node":">=22"},"license":"MIT"}
