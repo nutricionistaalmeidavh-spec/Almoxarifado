@@ -1,0 +1,24 @@
+name: Visual Fix Regression
+
+on:
+  push:
+    branches:
+      - fix/hidden-visibility-release
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm ci
+      - run: node --test tests/hidden-visibility.test.mjs
