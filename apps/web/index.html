@@ -32,8 +32,9 @@
         <button data-view="gestao">Gestão</button>
         <button data-view="avancado">Estoque avançado</button>
         <button data-view="custos">Custos e reposição</button>
+        <button data-view="documentos">Documentos</button>
         <button data-view="relatorios">Relatórios</button>
-        <button data-view="sistema">Sistema</button>
+        <button data-view="configuracoes">Configurações</button>
       </nav>
     </aside>
     <main class="main">
@@ -68,9 +69,28 @@
 
       <section id="view-custos" class="view"><div class="panel"><h2>Sugestões de reposição</h2><button id="load-replenishment" class="btn">Atualizar sugestões</button><div id="replenishment-table" class="table-wrap"></div></div><div class="panel"><h2>Histórico de preços</h2><div class="toolbar"><select id="cost-product"></select><button id="load-cost-history" class="btn secondary">Consultar</button></div><div id="cost-history-table"></div></div></section>
 
-      <section id="view-relatorios" class="view"><div class="panel"><h2>Relatórios</h2><div class="toolbar"><button id="download-stock" class="btn">Estoque CSV</button><button id="download-movements" class="btn secondary">Movimentações CSV</button><button id="print-stock" class="btn secondary">Imprimir / PDF</button><button id="print-labels" class="btn secondary">Etiquetas</button></div></div><div class="panel"><h2>Posição de estoque</h2><div id="report-stock" class="table-wrap"></div></div></section>
+      <section id="view-documentos" class="view">
+        <div class="grid">
+          <div class="panel"><h2>Novo documento</h2><form id="document-upload" class="form-grid"><div class="field"><label>Vincular a</label><select name="entityType" id="document-entity-type"><option value="product">Produto</option><option value="purchaseRequest">Solicitação de compra</option><option value="purchaseOrder">Pedido de compra</option><option value="receipt">Recebimento</option><option value="supplier">Fornecedor</option><option value="movement">Movimentação</option></select></div><div class="field"><label>Registro</label><select name="entityId" id="document-entity" required></select></div><div class="field"><label>Tipo</label><select name="kind"><option value="invoice">Nota fiscal</option><option value="receipt">Comprovante</option><option value="photo">Foto</option><option value="other">Outro</option></select></div><div class="field"><label>Arquivo (até 15 MB)</label><input id="document-file" name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,text/plain" required></div><button class="btn">Anexar</button></form></div>
+          <div class="panel"><h2>OCR local</h2><p class="muted">A extração é apenas uma prévia. Nenhum dado altera o estoque sem confirmação manual.</p><pre id="ocr-preview" class="preview">Selecione “OCR” em um documento.</pre></div>
+        </div>
+        <div class="panel"><div class="toolbar"><h2 class="grow">Documentos</h2><button id="reload-documents" class="btn secondary">Atualizar</button></div><div id="documents-table" class="table-wrap"></div></div>
+      </section>
 
-      <section id="view-sistema" class="view"><div class="grid"><div class="panel"><h2>Backup</h2><div class="toolbar"><button id="create-backup" class="btn">Criar backup</button><button id="export-backup" class="btn secondary">Exportar base</button><label class="btn secondary">Importar base<input id="import-backup" type="file" accept="application/json" hidden></label></div><div id="backups-table"></div></div><div class="panel"><h2>Novo usuário</h2><form id="user-form" class="form-grid"><input name="name" placeholder="Nome" required><input name="login" placeholder="Login" required><select name="role"><option>ADMIN</option><option>ALMOXARIFE</option><option>COMPRAS</option><option>GESTOR</option><option>LEITURA</option></select><input name="password" type="password" minlength="10" placeholder="Senha" required><button class="btn">Criar usuário</button></form><div id="users-table"></div></div></div></section>
+      <section id="view-relatorios" class="view">
+        <div class="panel"><h2>Relatórios</h2><div class="toolbar"><button id="download-stock" class="btn">Estoque CSV</button><button id="download-movements" class="btn secondary">Movimentações CSV</button><button id="print-stock" class="btn secondary">Imprimir / PDF</button><button id="print-labels" class="btn secondary">Etiquetas</button></div></div>
+        <div class="panel"><h2>Posição de estoque</h2><div id="report-stock" class="table-wrap"></div></div>
+        <div class="panel"><h2>Relatórios avançados</h2><div class="report-controls"><div class="field"><label>Relatório</label><select id="analytics-kind"><option value="abc">Curva ABC</option><option value="consumption">Consumo</option><option value="no-movement">Sem giro</option><option value="losses">Perdas/avarias</option><option value="valuation">Valorização</option><option value="movements">Movimentações detalhadas</option></select></div><div class="field"><label>De</label><input id="analytics-from" type="date"></div><div class="field"><label>Até</label><input id="analytics-to" type="date"></div><div class="field"><label>Dias sem giro</label><input id="analytics-days" type="number" min="0" value="30"></div><div class="field"><label>Produto</label><select id="analytics-product"></select></div><div class="field"><label>Depósito</label><select id="analytics-warehouse"></select></div><button id="analytics-run" class="btn">Gerar</button><button id="analytics-csv" class="btn secondary">CSV</button><button id="analytics-abc" class="btn secondary">Curva ABC rápida</button></div><div id="advanced-report" class="table-wrap"></div></div>
+      </section>
+
+      <section id="view-configuracoes" class="view">
+        <div class="grid">
+          <div class="panel"><h2>Backup</h2><div class="toolbar"><button id="create-backup" class="btn">Criar backup</button><button id="export-backup" class="btn secondary">Exportar base</button><label class="btn secondary">Importar base<input id="import-backup" type="file" accept="application/json" hidden></label></div><div id="backups-table"></div></div>
+          <div class="panel"><h2>Novo usuário</h2><form id="user-form" class="form-grid"><input name="name" placeholder="Nome" required><input name="login" placeholder="Login" required><select name="role"><option>ADMIN</option><option>ALMOXARIFE</option><option>COMPRAS</option><option>GESTOR</option><option>LEITURA</option></select><input name="password" type="password" minlength="10" placeholder="Senha" required><button class="btn">Criar usuário</button></form><div id="users-table"></div></div>
+          <div class="panel"><h2>Hardware local</h2><div id="hardware-status" class="status neutral">Verificando…</div><div class="toolbar top-gap"><button id="refresh-hardware" class="btn secondary">Atualizar hardware</button><select id="hardware-port"><option value="">Porta serial</option></select><button id="read-scale" class="btn secondary">Ler balança</button></div><div id="hardware-reading" class="muted top-gap"></div><hr><form id="hardware-setting-form" class="form-grid"><input name="name" value="Balança principal" required><input name="portPath" placeholder="COM3" required><input name="baudRate" type="number" value="9600" min="1" required><button class="btn">Salvar configuração</button></form></div>
+          <div class="panel"><h2>Rede e Desktop</h2><div id="network-status" class="stack"><div><strong>Servidor:</strong> <span id="network-origin"></span></div><div class="muted">O host Desktop mantém API, documentos, backups e logs locais. Alterações de porta/host exigem reinício do host.</div></div></div>
+        </div>
+      </section>
     </main>
   </div>
   <script src="/vendor/html5-qrcode.min.js"></script>
