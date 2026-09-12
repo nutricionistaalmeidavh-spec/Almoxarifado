@@ -9,4 +9,7 @@ export { createBackupService } from './backup/backup-service.mjs';
 export { createPurchasingService } from './purchasing/purchasing-service.mjs';
 export { createManagementService } from './management/management-service.mjs';
 export { createCostService } from './costs/cost-service.mjs';
+export { createDocumentService } from './documents/document-service.mjs';
+export { createAnalyticsService } from './analytics/analytics-service.mjs';
+export { createHardwareSettingsService } from './hardware/hardware-settings-service.mjs';
 export * from './reports/report-service.mjs';
