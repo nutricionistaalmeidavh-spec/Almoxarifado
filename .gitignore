@@ -3,6 +3,7 @@ dist/
 artifacts/
 coverage/
 data/
+.data/
 .env
 *.log
 .DS_Store
