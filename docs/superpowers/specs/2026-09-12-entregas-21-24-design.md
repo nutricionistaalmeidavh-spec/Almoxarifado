@@ -8,11 +8,15 @@ Fechar o ArtiSys Almoxarifado como produto Windows distribuível, mantendo o nú
 
 - Nenhum sistema de licença, chave, ativação, servidor de licença, limite por máquina ou bloqueio por assinatura.
 - Dados do cliente permanecem locais e fora da pasta de instalação do aplicativo.
-- Upgrade não pode apagar `.data`, documentos, backups, configurações ou logs.
+- Upgrade não pode apagar base, documentos, backups, configurações ou logs.
 - Desinstalação padrão não deve remover dados do usuário sem ação explícita.
 - GitHub Actions pode ser usado nesta etapa final para build e validação.
-- A afirmação de usabilidade se limita a evidência automatizável: build, instalação silenciosa em runner, inicialização, API, UI/smoke, fluxos principais, backup/restore e integridade do artefato.
+- A afirmação de usabilidade se limita a evidência automatizável: build, instalação silenciosa em runner, inicialização, API, UI/smoke, fluxos principais, persistência e integridade do artefato.
 - Homologação física de leitor, câmera, impressora, balança e máquina de cliente continua fora do escopo.
+
+## Runtime reproduzível
+
+`vendor/utilidades` continua pinado como fonte/referência dos módulos reutilizáveis, mas é um repositório privado separado. O workflow de release não pode depender de credenciais implícitas para clonar outro repositório privado. Por isso, os módulos necessários ao binário distribuído possuem snapshots de release em `vendor/release-modules/`, derivados do pin aprovado de `utilidades`. O `package.json` do produto final referencia apenas esses snapshots locais e pacotes públicos com versão fixa. Isso torna build/CI autocontidos e não adiciona serviço cloud ao runtime do cliente.
 
 ## Entrega 21 — Instalador e atualização
 
@@ -25,14 +29,14 @@ O pacote deve:
 - gerar `ArtiSys-Almoxarifado-Setup-1.0.0.exe`;
 - instalar atalhos apropriados;
 - manter `userData` separado da instalação;
-- permitir upgrade sobre versão anterior sem apagar dados;
+- permitir upgrade/reinstalação sem apagar dados;
 - incluir todos os módulos locais necessários ao runtime;
 - não depender de Node.js instalado na máquina do usuário;
 - não exigir Internet para operar depois de instalado.
 
 ### Política de atualização
 
-Nesta versão, atualização é manual por novo instalador. Não haverá auto-updater remoto obrigatório. O instalador deve substituir binários do aplicativo e preservar o diretório de dados.
+Nesta versão, atualização é manual por novo instalador. Não haverá auto-updater remoto obrigatório. O instalador substitui binários e preserva o diretório de dados.
 
 ## Entrega 22 — QA automatizado final
 
@@ -40,31 +44,26 @@ Criar uma suíte de release em duas camadas.
 
 ### Camada Linux/Node
 
-Executar:
-
-- `npm ci`;
-- testes unitários/integrados completos;
-- verificações de sintaxe;
-- validação de configuração QA;
-- testes de domínio/API/UI já existentes.
+Executar testes unitários/integrados completos, verificações de sintaxe, validação QA, segurança e preflight de release.
 
 ### Camada Windows
 
 Em `windows-latest`:
 
 1. instalar dependências;
-2. executar testes compatíveis com Windows;
+2. executar testes e checks;
 3. gerar o instalador NSIS;
 4. instalar silenciosamente o `.exe` em ambiente limpo do runner;
-5. iniciar o aplicativo/runtime instalado;
-6. aguardar `/api/health` responder;
-7. executar smoke automatizado sobre a aplicação instalada;
-8. validar backup/restore com diretório temporário;
+5. iniciar a aplicação instalada;
+6. aguardar `/api/health`;
+7. executar smoke automatizado sobre a UI/API instalada;
+8. criar produto e entrada de estoque;
 9. encerrar o app;
-10. validar preservação dos dados após reinstalação/upgrade do mesmo pacote;
-11. gerar artefato do workflow apenas se os gates anteriores estiverem verdes.
+10. reinstalar o mesmo pacote sem apagar `userData`;
+11. reiniciar e verificar que produto/saldo persistiram;
+12. gerar artifact apenas se todos os gates anteriores estiverem verdes.
 
-O smoke deve cobrir, no mínimo: tela inicial/login, bootstrap do admin quando aplicável, carregamento da UI, criação de produto, entrada de estoque, leitura do dashboard e endpoint de saúde.
+O smoke cobre, no mínimo: tela inicial/login, bootstrap do admin quando aplicável, carregamento da UI, criação de produto, entrada de estoque, leitura do dashboard e endpoint de saúde.
 
 ## Entrega 23 — Segurança e release
 
@@ -73,26 +72,27 @@ O smoke deve cobrir, no mínimo: tela inicial/login, bootstrap do admin quando a
 - `npm run check`;
 - `npm run qa:validate`;
 - `npm run security`;
+- auditoria de dependências de produção no workflow;
 - `npm run release:check`;
 - verificação de ausência de segredos versionados;
 - geração de SHA-256 do instalador;
-- arquivo `SHA256SUMS.txt` junto do artefato;
-- release manifest contendo versão, commit, nome do artefato, tamanho e hash.
+- `SHA256SUMS.txt`;
+- `release-manifest.json` com versão, commit, artefato, tamanho e hash.
 
-O release-check deve falhar se o instalador esperado estiver ausente ou se algum gate obrigatório não tiver evidência.
+O release-check falha se o instalador esperado, hash ou manifesto estiver ausente/inconsistente no gate final.
 
 ### Segurança do Desktop
 
-Manter `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true` e bloquear abertura arbitrária de janelas externas. Nenhuma credencial padrão será embutida no pacote.
+Manter `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true` e bloquear abertura arbitrária de janelas externas. Nenhuma credencial padrão é embutida no pacote.
 
 ## Entrega 24 — Distribuição comercial sem licença
 
-A entrega comercial conterá apenas:
+A entrega comercial contém:
 
 - instalador Windows final;
 - `SHA256SUMS.txt`;
 - manifesto da release;
-- manual de instalação/primeiro acesso em formato simples no repositório;
+- manual de instalação/primeiro acesso;
 - README atualizado.
 
 Não haverá versão demo bloqueada nem mecanismo de licença.
@@ -103,31 +103,31 @@ Publicar dentro da organização existente:
 
 `01 - Sistemas e Artisys / Almoxarifado / Atual`
 
-Estrutura desejada:
+Estrutura:
 
 - `Atual/` — instalador final e arquivos de verificação;
 - `Anterior/` — reservado para futuras versões substituídas;
 - `Manuais/` — documentação de instalação/uso.
 
-Se `Almoxarifado` ou subpastas ainda não existirem, criá-las sob `01 - Sistemas e Artisys`.
+Se `Almoxarifado` ou subpastas não existirem, criá-las sob `01 - Sistemas e Artisys`.
 
-O upload ao Drive ocorre somente após o workflow final estar verde e o hash do artefato ser conferido.
+O upload ocorre somente após o workflow final verde e conferência do hash.
 
 ## GitHub Actions
 
-Criar workflow explícito de release final, acionável por `workflow_dispatch` e/ou tag `v*`. Não criar execução em cada commit. Isso preserva minutos e segue a regra de CI apenas no fechamento.
+Workflow explícito de release final, acionado manualmente/tag ou pelo trigger de fechamento. Ele não roda em cada commit. Para provar a branch antes da integração, o mesmo trigger pode ser usado uma vez na branch final; após integração, a alteração do trigger em `main` valida novamente exatamente o commit distribuído.
 
-O workflow Windows deve publicar o instalador como artifact do GitHub Actions. O arquivo baixado desse artifact será o mesmo enviado ao Drive; não será reconstruído fora do workflow depois dos gates.
+O job Windows publica o instalador como artifact. O arquivo baixado desse artifact é o mesmo enviado ao Drive; não é reconstruído depois dos gates.
 
 ## Critério de conclusão
 
 As entregas 21–24 só podem ser declaradas concluídas quando:
 
-1. a suíte completa executada no commit final estiver verde;
+1. a suíte completa do commit final estiver verde;
 2. o workflow Windows produzir o `.exe`;
-3. a aplicação instalada responder ao smoke automatizado;
-4. SHA-256 e manifesto forem gerados e conferidos;
+3. a aplicação instalada passar pelo smoke automatizado;
+4. SHA-256 e manifesto forem conferidos;
 5. o commit final estiver integrado ao `main`;
-6. o mesmo `.exe` aprovado pelo workflow estiver publicado em `01 - Sistemas e Artisys / Almoxarifado / Atual`.
+6. o mesmo `.exe` aprovado estiver publicado em `01 - Sistemas e Artisys / Almoxarifado / Atual`.
 
 Falha em qualquer gate impede publicação e conclusão.
