@@ -1,0 +1,1 @@
+{"name":"@artisys/desktop-shell","version":"0.1.0","type":"module","exports":"./src/index.mjs","engines":{"node":">=22"},"license":"MIT"}
