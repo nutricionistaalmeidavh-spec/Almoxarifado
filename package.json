@@ -1,0 +1,30 @@
+{
+  "name": "artisys-almoxarifado",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && node --check apps/desktop/src/main.mjs && node --check src/platform/config.mjs && node --check src/platform/integrations.mjs && node --check src/platform/runtime-plan.mjs && node --check src/platform/web-server.mjs && node --check scripts/serve-web.mjs",
+    "qa:validate": "node vendor/utilidades/modules/artisys-qa/src/cli.mjs validate --config ./artisys-qa.config.json",
+    "security": "python vendor/utilidades/modules/artisys-security/security.py . --mode commit",
+    "release:check": "node scripts/release-check.mjs",
+    "artisys:verify": "node scripts/verify-artisys.mjs",
+    "dev:web": "node scripts/serve-web.mjs"
+  },
+  "dependencies": {
+    "@artisys/desktop-shell": "file:vendor/utilidades/modules/artisys-desktop-shell",
+    "@artisys/local-backend": "file:vendor/utilidades/modules/artisys-local-backend",
+    "@artisys/eventbus": "file:vendor/utilidades/modules/artisys-eventbus",
+    "@artisys/dashboard": "file:vendor/utilidades/modules/artisys-dashboard",
+    "@artisys/capture": "file:vendor/utilidades/modules/artisys-capture",
+    "@artisys/pdf": "file:vendor/utilidades/modules/artisys-pdf",
+    "@artisys/printing": "file:vendor/utilidades/modules/artisys-printing"
+  },
+  "devDependencies": {
+    "@artisys/release": "file:vendor/utilidades/modules/artisys-release"
+  }
+}

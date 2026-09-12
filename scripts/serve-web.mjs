@@ -1,0 +1,10 @@
+import { createWebServer } from '../src/platform/web-server.mjs';
+const host = process.env.ALMOX_WEB_HOST || '0.0.0.0';
+const port = Number(process.env.ALMOX_WEB_PORT || 4173);
+const server = createWebServer({ host, port });
+await server.start();
+const address = server.address();
+console.log(`ArtiSys Almoxarifado PWA: http://${address.address}:${address.port}`);
+const shutdown = async () => { await server.stop(); process.exit(0); };
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
