@@ -15,7 +15,7 @@
     "artisys:verify": "node scripts/verify-artisys.mjs",
     "dev:web": "node scripts/serve-web.mjs",
     "desktop": "electron apps/desktop/src/electron-main.mjs",
-    "build:win": "electron-builder --win nsis --x64",
+    "build:win": "electron-builder --win nsis --x64 --publish never",
     "smoke:release": "node scripts/release-smoke.mjs"
   },
   "dependencies": {
