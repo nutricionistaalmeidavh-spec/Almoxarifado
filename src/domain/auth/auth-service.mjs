@@ -3,10 +3,10 @@ import { DomainError } from '../shared/domain-error.mjs';
 
 export const ROLE_PERMISSIONS = Object.freeze({
   ADMIN: ['*'],
-  ALMOXARIFE: ['catalog.view','catalog.manage','stock.view','stock.create','stock.adjust','stock.transfer','inventory.view','inventory.create','inventory.count','inventory.close','reports.export','advanced-stock.manage'],
-  COMPRAS: ['catalog.view','stock.view','reports.export','purchases.view','purchases.create','purchases.quote','purchases.order','purchases.receive','costs.view','replenishment.view'],
-  GESTOR: ['catalog.view','stock.view','inventory.view','reports.export','purchases.view','purchases.approve','costs.view','replenishment.view','management.view','management.manage'],
-  LEITURA: ['catalog.view','stock.view','inventory.view','reports.export','purchases.view','costs.view','management.view']
+  ALMOXARIFE: ['catalog.view','catalog.manage','stock.view','stock.create','stock.adjust','stock.transfer','inventory.view','inventory.create','inventory.count','inventory.close','reports.export','advanced-stock.manage','documents.view','documents.manage','ocr.run','analytics.view','hardware.use'],
+  COMPRAS: ['catalog.view','stock.view','reports.export','purchases.view','purchases.create','purchases.quote','purchases.order','purchases.receive','costs.view','replenishment.view','documents.view','documents.manage','ocr.run','analytics.view'],
+  GESTOR: ['catalog.view','stock.view','inventory.view','reports.export','purchases.view','purchases.approve','costs.view','replenishment.view','management.view','management.manage','documents.view','analytics.view','hardware.use'],
+  LEITURA: ['catalog.view','stock.view','inventory.view','reports.export','purchases.view','costs.view','management.view','documents.view','analytics.view']
 });
 
 function normalizeLogin(value) { return String(value ?? '').trim().toLowerCase(); }
