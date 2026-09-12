@@ -29,6 +29,13 @@ function requireTrackedContext(repository,{productId,warehouseId,lotId=null,seri
 export function createAdvancedStockService({repository,stock,now=()=>new Date().toISOString(),idFactory=randomUUID}={}){
   if(!repository||!stock) throw new TypeError('repository and stock are required');
   const activeReserved=(productId,warehouseId)=>repository.listReservations().filter((r)=>r.productId===productId&&r.warehouseId===warehouseId&&r.status==='ACTIVE').reduce((sum,r)=>sum+Number(r.quantity||0),0);
+  const closeTrackedSerial=async(input,movementType,serialStatus)=>repository.transaction(async()=>{
+    const amount=Number(input.quantity); requirePositiveNumber(amount);
+    const tracked=requireTrackedContext(repository,{productId:input.productId,warehouseId:input.warehouseId,lotId:input.lotId??null,serialId:input.serialId??null,quantity:amount});
+    const movement=await stock.exit({...input,quantity:amount,movementType,lotId:tracked.lotId,serialId:tracked.serialId});
+    if(tracked.serial) repository.saveSerial({...tracked.serial,status:serialStatus,active:false,closedAt:now(),closedBy:input.userId,lastMovementId:movement.id,updatedAt:now()});
+    return movement;
+  });
   const ensureDestinationLot=(sourceLot,targetWarehouseId)=>{
     if(!sourceLot) return null;
     const existing=repository.listLots().find((lot)=>lot.productId===sourceLot.productId&&lot.warehouseId===targetWarehouseId&&lot.code===sourceLot.code&&lot.active!==false);
@@ -65,8 +72,8 @@ export function createAdvancedStockService({repository,stock,now=()=>new Date().
       if(repository.listSerials().some((s)=>s.serial===value)) throw new DomainError('SERIAL_EXISTS','serial already exists');
       return repository.saveSerial({id:idFactory(),productId,warehouseId,lotId,serial:value,status:'ACTIVE',active:true,createdAt:now()});
     },
-    async loss(input){ return stock.exit({...input,movementType:'LOSS'}); },
-    async damage(input){ return stock.exit({...input,movementType:'DAMAGE'}); },
+    async loss(input){ return closeTrackedSerial(input,'LOSS','LOST'); },
+    async damage(input){ return closeTrackedSerial(input,'DAMAGE','DAMAGED'); },
     async returnToStock(input){ return stock.entry({...input,movementType:'RETURN'}); },
     async dispatchTransfer({productId,sourceWarehouseId,targetWarehouseId,quantity,userId,reason='',lotId=null,serialId=null}){
       if(sourceWarehouseId===targetWarehouseId) throw new DomainError('INVALID_TRANSFER','source and target warehouses must differ');
