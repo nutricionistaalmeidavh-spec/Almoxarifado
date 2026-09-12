@@ -62,3 +62,14 @@ test('tracked direct transfer is rejected so lot and serial cannot be attached t
     (error)=>error.code==='TRACKED_TRANSFER_REQUIRES_TRANSIT'
   );
 });
+
+test('serialized damage closes the serial lifecycle after removing the physical unit',async()=>{
+  const {repository,advanced}=fixture();
+  const serial=advanced.registerSerial({productId:'p1',warehouseId:'w1',serial:'SN-DMG'});
+  const movement=await advanced.damage({productId:'p1',warehouseId:'w1',quantity:1,userId:'u1',serialId:serial.id});
+  const saved=repository.getSerial(serial.id);
+  assert.equal(saved.status,'DAMAGED');
+  assert.equal(saved.active,false);
+  assert.equal(saved.lastMovementId,movement.id);
+  assert.equal(saved.closedBy,'u1');
+});
