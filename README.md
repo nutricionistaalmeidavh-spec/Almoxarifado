@@ -64,11 +64,13 @@ KPIs, posição de estoque, histórico, CSV, impressão/PDF e etiquetas.
 
 ### 14 — Estoque avançado
 - Reservas e consumo/liberação.
-- Estoque físico × disponível.
-- Lote e validade.
-- Número de série.
+- Estoque físico × disponível, impedindo saídas, perdas, avarias e transferências de consumirem saldo reservado por outra operação.
+- Lote e validade por produto e depósito; o mesmo código de lote pode existir em depósitos distintos sem perder rastreabilidade.
+- Número de série com vínculo obrigatório ao produto, depósito e lote corretos; movimento serializado representa exatamente uma unidade.
 - Perda, avaria e devolução.
 - Transferência com estado `IN_TRANSIT` e confirmação de recebimento.
+- Transferências com lote/série usam obrigatoriamente o fluxo em trânsito; no recebimento a série muda de depósito e o lote equivalente é criado/reutilizado no destino.
+- Referências de reserva, lote, série e trânsito persistidas no schema para auditoria e recuperação.
 
 ### 15 — Custos e reposição
 - Custo médio atualizado no recebimento de compra.
