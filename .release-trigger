@@ -1,2 +1,3 @@
 ArtiSys Almoxarifado 1.0.0 — final release validation trigger
 retry: electron-builder publish disabled
+visual-fix: hidden visibility regression corrected
