@@ -26,6 +26,33 @@ Desenvolvimento/release, sem entrar no runtime do cliente:
 - `artisys-security`
 - `@artisys/release`
 
+### 03 — Modelagem do banco
+Coleções locais definidas para:
+- categorias e fornecedores;
+- depósitos e usuários;
+- produtos;
+- saldos e movimentações;
+- sessões e contagens de inventário.
+
+O schema é entregue a `backend.collections`, mantendo a infraestrutura local-first.
+
+### 04 — Motor de estoque
+- entrada;
+- saída com bloqueio de saldo negativo;
+- ajuste de saldo físico;
+- transferência atômica entre depósitos;
+- movimentos auditáveis;
+- eventos `stock.*` preparados para o EventBus.
+
+### 05 — Inventário
+- snapshot do saldo esperado;
+- contagem e divergência;
+- recontagem;
+- bloqueio de movimentações no depósito enquanto o inventário está aberto;
+- fechamento somente com todos os itens contados;
+- divergências convertidas em ajustes auditáveis;
+- eventos `inventory.*`.
+
 O repositório `utilidades` é consumido como submodule em `vendor/utilidades`, fixado em commit revisado. Não são copiadas implementações upstream para este produto.
 
 ## Preparação
@@ -59,4 +86,4 @@ A execução completa de QA/segurança/CI deve ser reservada aos checkpoints de 
 
 ## Próxima entrega
 
-Modelagem do banco: produtos, categorias, fornecedores, depósitos, usuários e movimentações.
+Etapa 06: interface do produto — dashboard, cadastros, movimentações, inventário e relatórios.
