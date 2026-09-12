@@ -1,6 +1,12 @@
 export { createMemoryStockRepository } from './stock/repository.mjs';
 export { createFileStockRepository } from './stock/file-repository.mjs';
 export { createStockService } from './stock/stock-service.mjs';
+export { createAdvancedStockService } from './stock/advanced-stock-service.mjs';
 export { createInventoryService } from './inventory/inventory-service.mjs';
 export { createCatalogService } from './catalog/catalog-service.mjs';
+export { createAuthService, ROLE_PERMISSIONS, hasPermission, permissionsForRole } from './auth/auth-service.mjs';
+export { createBackupService } from './backup/backup-service.mjs';
+export { createPurchasingService } from './purchasing/purchasing-service.mjs';
+export { createManagementService } from './management/management-service.mjs';
+export { createCostService } from './costs/cost-service.mjs';
 export * from './reports/report-service.mjs';
