@@ -1,0 +1,1 @@
+{"name":"@artisys/upload","version":"1.0.0","type":"module","engines":{"node":">=22"},"exports":{".":"./src/index.mjs"},"license":"MIT"}
