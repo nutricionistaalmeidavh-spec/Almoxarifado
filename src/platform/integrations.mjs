@@ -6,6 +6,9 @@ export const ARTISYS_MODULES = Object.freeze({
   capture: { package: '@artisys/capture', runtime: true },
   pdf: { package: '@artisys/pdf', runtime: true },
   printing: { package: '@artisys/printing', runtime: true },
+  upload: { package: '@artisys/upload', runtime: true },
+  ocr: { package: '@artisys/ocr', runtime: true },
+  serialport: { package: '@artisys/serialport', runtime: true },
   qa: { package: '@artisys/qa', runtime: false, ciOnly: true },
   security: { path: 'vendor/utilidades/modules/artisys-security/security.py', runtime: false, ciOnly: true },
   release: { package: '@artisys/release', runtime: false, ciOnly: true }
