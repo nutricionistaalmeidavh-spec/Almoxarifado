@@ -4,6 +4,7 @@ import { createAlmoxarifadoDesktopRuntime } from '../../../src/platform/desktop-
 
 let runtime;
 let mainWindow;
+let shuttingDown=false;
 
 async function boot(){
   const dataDir=path.join(app.getPath('userData'),'data');
@@ -15,6 +16,11 @@ async function boot(){
   mainWindow.once('ready-to-show',()=>mainWindow.show());
 }
 
-app.whenReady().then(boot);
+app.whenReady().then(boot).catch((error)=>{console.error(error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{runtime?.stop().catch(()=>{});});
+app.on('before-quit',(event)=>{
+  if(shuttingDown||!runtime)return;
+  event.preventDefault();
+  shuttingDown=true;
+  runtime.stop().catch((error)=>console.error(error)).finally(()=>app.quit());
+});
