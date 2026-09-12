@@ -2,28 +2,23 @@
 
 Sistema local-first de almoxarifado. O PC Windows atua como host principal e serve a PWA/API para desktop, celular e tablet na mesma LAN. O núcleo não depende de cloud nem de serviço pago.
 
+**Release final:** `1.0.0` — Windows x64 — `ArtiSys-Almoxarifado-Setup-1.0.0.exe`.
+
+O produto é distribuído **sem sistema de licença**, chave, ativação, limite por máquina, assinatura obrigatória ou servidor de licença.
+
 ## Entregas implementadas
 
 ### 01–09 — Núcleo operacional
 Base Desktop/PWA, utilidades ArtiSys, modelagem, motor de estoque, inventário, interface, persistência LAN, código de barras, relatórios, impressão e etiquetas.
 
 ### 10 — Autenticação e permissões
-- Primeiro acesso configura o administrador local.
-- Senhas com `scrypt` + salt, sessões locais e expiração.
-- Perfis: `ADMIN`, `ALMOXARIFE`, `COMPRAS`, `GESTOR`, `LEITURA`.
-- Autorização server-side e auditoria pelo usuário autenticado.
+Primeiro acesso configura o administrador local; senhas com `scrypt` + salt; sessões; perfis `ADMIN`, `ALMOXARIFE`, `COMPRAS`, `GESTOR`, `LEITURA`; autorização server-side e auditoria.
 
 ### 11 — Backup e recuperação
-- Backup manual e automático local.
-- Backup pré-restauração/importação.
-- Restauração validada e persistência atômica.
-- Backups locais incluem também os arquivos em `.data/documents/`.
-- Retenção configurável.
-
-> `Exportar base` continua sendo exportação JSON da base. Os backups locais em `.data/backups/` são os snapshots completos que preservam também anexos binários.
+Backup manual/automático, snapshot pré-restauração/importação, restauração validada, persistência atômica, anexos binários e retenção configurável.
 
 ### 12 — Compras e recebimento
-Solicitação, cotação, aprovação, pedido, recebimento com entrada automática no estoque e histórico de custos.
+Solicitação, cotação, aprovação, pedido, recebimento com entrada automática e histórico de custos.
 
 ### 13 — Centros de custo e obras
 Centros de custo, obras/projetos, setores/departamentos, responsável pela retirada e vínculo auditável com movimentações.
@@ -32,68 +27,69 @@ Centros de custo, obras/projetos, setores/departamentos, responsável pela retir
 Reservas, físico × disponível, lote/validade, número de série, perdas, avarias, devoluções e transferências em trânsito com rastreabilidade.
 
 ### 15 — Custos e reposição
-Custo médio, histórico de preços, estoque mínimo/alvo e sugestões de reposição considerando reservas.
+Custo médio, histórico de preços, estoque mínimo/alvo e sugestão de reposição considerando reservas.
 
 ### 16 — Documentos e anexos
-- Arquivos locais em `.data/documents/`.
-- PDF, JPEG, PNG, WebP e texto simples.
-- Limite padrão de 15 MB.
-- SHA-256 para integridade.
-- Vínculo com produto, movimentação, fornecedor, solicitação, pedido ou recebimento.
-- Download e exclusão auditável com autorização server-side.
-- Nome fornecido pelo usuário nunca é usado como caminho físico.
+Armazenamento local em `.data/documents/`, PDF/imagens/texto, limite padrão de 15 MB, SHA-256, vínculos operacionais, download e exclusão auditável.
 
 ### 17 — OCR local opcional
-- Adapter para `@artisys/ocr`.
-- Resultado persistido no documento com texto, confiança, blocos e candidatos extraídos.
-- Prévia/revisão antes de qualquer uso operacional.
-- OCR indisponível não bloqueia anexos nem recebimento manual.
-- Nenhum serviço cloud é obrigatório.
+Adapter OCR local, resultado persistido/revisável e funcionamento manual preservado quando não houver engine OCR instalada.
 
 ### 18 — Relatórios avançados
-- Curva ABC.
-- Consumo por período.
-- Produtos sem giro.
-- Perdas e avarias.
-- Valorização física/disponível e histórico de custo.
-- Filtros por produto, categoria, depósito, fornecedor, centro de custo, obra, setor, usuário e responsável.
-- JSON e CSV compatível com Excel.
+Curva ABC, consumo, sem giro, perdas/avarias, valorização, histórico de custo, filtros operacionais e CSV.
 
 ### 19 — Hardware opcional
-- Serial/balança via `@artisys/serialport`.
-- Impressão térmica via `@artisys/printing`.
-- Configurações locais e auditáveis.
-- Falta de driver/dispositivo resulta em `unavailable`; o sistema continua funcionando normalmente.
-- Impressão padrão do navegador/Desktop continua disponível como fallback.
+Serial/balança e impressão por transporte quando disponíveis; ausência de hardware não impede o funcionamento do almoxarifado. Impressão do navegador/Desktop permanece como fallback.
 
 ### 20 — Desktop final
-- Runtime operacional centralizado para base local, API, PWA, documentos, backup, hardware e OCR.
-- `settings.json` local com rede, backup e hardware.
-- Logs locais com rotação simples.
-- Host Electron com `contextIsolation`, sandbox e `nodeIntegration` desativado.
-- Mesma composição é reutilizada pelo modo web de desenvolvimento para reduzir divergência.
-- O runtime operacional usa `.data/almoxarifado.json`; PocketBase permanece apenas como preparação/legado arquitetural e não é a fonte de dados do produto atual.
+Runtime central para base, API/PWA, documentos, backup, configurações, logs, hardware e OCR. Electron com `contextIsolation`, sandbox, `nodeIntegration: false` e bloqueio de janelas externas.
 
-## Executar
+### 21 — Instalador e atualização
+- Electron + NSIS para **Windows x64**.
+- Artefato final: `ArtiSys-Almoxarifado-Setup-1.0.0.exe`.
+- Instalação por usuário com atalhos.
+- Runtime completo empacotado: o usuário não precisa instalar Node.js.
+- Dados ficam separados da pasta de instalação.
+- Reinstalação/upgrade não remove a base local.
+- Desinstalação padrão não apaga os dados do usuário.
+
+### 22 — QA automatizado final
+- Suíte completa Node/API/UI.
+- Smoke Playwright sobre a aplicação instalada.
+- Bootstrap/login, criação de produto, entrada de estoque e dashboard.
+- Reinstalação do mesmo `.exe` e verificação de persistência dos dados.
+- GitHub Actions Linux + Windows usado somente no fechamento da release.
+
+### 23 — Segurança e release
+- Gate de sintaxe/testes.
+- QA de configuração.
+- Verificação de segredos e hardening Desktop.
+- Auditoria de dependências no workflow.
+- SHA-256 do instalador.
+- `SHA256SUMS.txt` e `release-manifest.json` conferidos antes da distribuição.
+
+### 24 — Distribuição final sem licença
+- Instalador Windows final.
+- Arquivos de integridade e manifesto.
+- Manual de instalação/primeiro acesso.
+- Pacote comercial **sem licença ou ativação** e sem demo bloqueada.
+
+## Desenvolvimento
+
+A fonte histórica de módulos reutilizáveis permanece pinada em `vendor/utilidades`. Para que o build final do repositório privado seja reproduzível sem credencial para um segundo repositório privado, os módulos efetivamente necessários ao runtime de distribuição também possuem snapshots mínimos pinados em `vendor/release-modules/`.
 
 ```bash
-git submodule update --init --recursive
 npm install
+npm run dev:web
 ```
 
-### Desktop Windows
+Para executar o host Electron em desenvolvimento:
 
 ```bash
 npm run desktop
 ```
 
-### Host web/PWA local
-
-```bash
-npm run dev:web
-```
-
-No primeiro acesso, abra `http://localhost:4173` no PC principal e defina a senha do administrador com pelo menos 10 caracteres. Esse bootstrap inicial é aceito apenas em loopback. Depois, outros aparelhos da mesma LAN podem acessar `http://IP-DO-PC:4173` e autenticar normalmente.
+No primeiro acesso local, defina a senha do administrador com pelo menos 10 caracteres. Depois, dispositivos da mesma rede podem acessar `http://IP-DO-PC:4173`.
 
 ## Dados locais
 
@@ -102,31 +98,26 @@ No primeiro acesso, abra `http://localhost:4173` no PC principal e defina a senh
 ├── almoxarifado.json
 ├── documents/
 ├── backups/
-│   ├── almoxarifado-....json
-│   └── almoxarifado-....assets/documents/
 ├── logs/
 └── settings.json
 ```
 
-A pasta `.data/` não deve ser versionada no Git.
+No instalador, o equivalente fica no diretório de dados do usuário do Windows, separado dos binários do programa.
 
 ## Verificação
 
 ```bash
 npm test
 npm run check
-```
-
-Gates mais pesados continuam explícitos e reservados para checkpoint/release:
-
-```bash
 npm run qa:validate
 npm run security
 npm run release:check
 ```
 
-## Próxima entrega
+O workflow `.github/workflows/release-final.yml` adiciona o gate Windows: build NSIS, instalação silenciosa, inicialização, `/api/health`, smoke funcional, reinstalação/persistência, hash e manifesto.
 
-**21 — Empacotamento Windows:** instalador `.exe`, upgrade, desinstalação e preservação segura da base local.
+## Manual
 
-> Homologações físicas em máquinas, leitores, impressoras, balanças, celular/tablet e ambiente real do cliente não fazem parte desta etapa.
+Consulte `docs/MANUAL-INSTALACAO.md`.
+
+> A validação automatizada da release comprova os fluxos de software cobertos pelo workflow. Homologação física de leitores, câmeras, impressoras, balanças e máquinas específicas de clientes não é alegada por esse gate.
