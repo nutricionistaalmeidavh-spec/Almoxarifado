@@ -3,7 +3,7 @@ function unavailable(capability){return new DomainError('HARDWARE_UNAVAILABLE',`
 function normalizeScaleSettings(settings={}){const portPath=String(settings.portPath??settings.path??'').trim();if(!portPath)throw new DomainError('INVALID_INPUT','portPath is required',{field:'portPath'});const baudRate=Number(settings.baudRate??9600);if(!Number.isInteger(baudRate)||baudRate<=0)throw new DomainError('INVALID_INPUT','baudRate must be a positive integer',{field:'baudRate'});return{...settings,portPath,baudRate,profile:{path:portPath,baudRate,...(settings.profile??{})}};}
 export function createHardwareAdapter({serialApi=null,printingApi=null}={}){
   const serialAvailable=()=>Boolean(serialApi&&typeof serialApi.createSerialPortManager==='function');
-  const printingAvailable=()=>Boolean(printingApi&&(typeof printingApi.print==='function'||typeof printingApi.createTransportPrinterDriver==='function'||typeof printingApi.createPrinterResolver==='function'));
+  const printingAvailable=()=>Boolean(printingApi&&(typeof printingApi.print==='function'||typeof printingApi.createTransportPrinterDriver==='function'||typeof printingApi.createThermalPrinterDriver==='function'||typeof printingApi.createPrinterResolver==='function'));
   return{
     status(){return{serial:serialAvailable()?'available':'unavailable',printing:printingAvailable()?'available':'unavailable'};},
     async listPorts(){if(!serialAvailable())throw unavailable('serial');try{return await serialApi.createSerialPortManager().list();}catch(error){throw new DomainError('HARDWARE_UNAVAILABLE','serial ports could not be listed',{cause:String(error?.message??error)});}},
@@ -19,6 +19,9 @@ export function createHardwareAdapter({serialApi=null,printingApi=null}={}){
       if(!printingAvailable())throw unavailable('printing');
       try{
         if(typeof printingApi.print==='function')return await printingApi.print(job,settings);
+        if(settings.mode==='thermal'&&typeof printingApi.createThermalPrinterDriver==='function'){
+          const driver=printingApi.createThermalPrinterDriver();return await driver.print(job,settings);
+        }
         if(settings.mode==='transport'&&serialAvailable()&&typeof printingApi.createTransportPrinterDriver==='function'){
           const normalized=normalizeScaleSettings(settings);const transport=serialApi.createSerialPortManager().createTransport(normalized.profile);const driver=printingApi.createTransportPrinterDriver({transport});return await driver.print(job,settings);
         }
