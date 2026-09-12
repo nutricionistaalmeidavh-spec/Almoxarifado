@@ -35,12 +35,13 @@ Nenhum módulo externo será importado diretamente pelo domínio de estoque, com
 
 - Diretório local padrão `.data/documents/`.
 - Metadados persistidos em coleção `documents`.
-- Tipos aceitos inicialmente: PDF, imagens JPEG/PNG/WebP e arquivos de texto simples.
-- Limite de tamanho configurável, com default conservador.
+- Tipos aceitos inicialmente: PDF, JPEG, PNG, WebP e texto simples.
+- Limite padrão de 15 MB por arquivo, configurável localmente.
 - Hash SHA-256 por arquivo para integridade e deduplicação opcional.
 - Vínculo genérico por `entityType` + `entityId`.
 - Entidades suportadas inicialmente: produto, movimentação, solicitação de compra, pedido, recebimento e fornecedor.
-- Listagem, download e exclusão lógica/física controlada por permissão.
+- Upload via `multipart/form-data` na API local.
+- Listagem, download e exclusão controlada por permissão.
 - Fotos e comprovantes passam pelo mesmo contrato.
 
 ### Regras
@@ -48,7 +49,8 @@ Nenhum módulo externo será importado diretamente pelo domínio de estoque, com
 - Nome do arquivo fornecido pelo usuário nunca será usado como caminho físico.
 - O storage usará IDs internos e diretório controlado.
 - Downloads devem validar autorização e resolver arquivos apenas dentro do diretório permitido.
-- Exclusão deve remover metadado e arquivo de forma consistente, com tratamento para ausência física.
+- Exclusão marca o registro com `deletedAt/deletedBy` e remove o arquivo físico; o metadado de auditoria permanece persistido e não aparece nas listagens padrão.
+- Ausência física de um arquivo já marcado como excluído é tratada como estado idempotente, não como falha fatal.
 
 ## Entrega 17 — OCR e automação de recebimento
 
@@ -131,7 +133,7 @@ Nenhum módulo externo será importado diretamente pelo domínio de estoque, com
 - Lifecycle seguro de start/stop.
 - Porta configurável com detecção de conflito e erro claro.
 - Diretório de dados derivado de pasta de aplicação do usuário, com override por configuração/env para desenvolvimento.
-- Logs locais rotacionáveis/simples, sem dados sensíveis desnecessários.
+- Logs locais simples com rotação por tamanho/quantidade, sem credenciais ou tokens.
 - Settings locais para rede, backup, impressora e serial.
 
 ### Atualização e instalador
@@ -190,7 +192,7 @@ A persistência JSON local atual continuará suportada; o schema declarativo dev
 
 ### Documentos
 
-- `POST /api/documents`
+- `POST /api/documents` (`multipart/form-data`)
 - `GET /api/documents?entityType=&entityId=`
 - `GET /api/documents/:id/download`
 - `DELETE /api/documents/:id`
