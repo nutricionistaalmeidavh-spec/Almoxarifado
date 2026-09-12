@@ -1,4 +1,7 @@
-if (typeof document !== 'undefined') import('./features-16-20.js').catch((error)=>console.error('Falha ao carregar recursos 16–20',error));
+if (typeof document !== 'undefined') {
+  try { await import('./features-16-20.js'); }
+  catch (error) { console.error('Falha ao carregar recursos 16–20', error); }
+}
 
 export function normalizeBarcode(value){return String(value??'').trim();}
 export function findProductByBarcode(products,code){const normalized=normalizeBarcode(code);if(!normalized)return null;return products.find((item)=>item.barcode===normalized||item.sku===normalized)??null;}
