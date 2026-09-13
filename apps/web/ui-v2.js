@@ -1,6 +1,15 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+function installLoteATheme() {
+  if (document.querySelector('link[data-artisys-theme="lote-a"]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/theme-lote-a.css';
+  link.dataset.artisysTheme = 'lote-a';
+  document.head.append(link);
+}
+
 const movementLabels = {
   ENTRY: { label: 'Entrada', className: 'badge-success' },
   EXIT: { label: 'Saída', className: 'badge-danger' },
@@ -130,6 +139,7 @@ function observeRenders() {
   decorateDynamicContent(main);
 }
 
+installLoteATheme();
 setupMovementShortcuts();
 setupSettingsTabs();
 observeRenders();
