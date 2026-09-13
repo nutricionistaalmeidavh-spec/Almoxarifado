@@ -11,7 +11,7 @@ test('release browser smoke covers installed usability path',async()=>{
 
 test('release smoke captures real UI v2 screenshots from installed app',async()=>{
   const source=await read('scripts/release-smoke.mjs');
-  for(const token of ['ALMOX_SCREENSHOT_DIR','page.screenshot','dashboard','cadastros','movimentacoes','inventario','compras','documentos','relatorios','configuracoes']) assert.ok(source.includes(token),`release smoke missing visual QA token ${token}`);
+  for(const token of ['ALMOX_SCREENSHOT_DIR','page.screenshot','dashboard','cadastros','movimentacoes','inventario','compras','documentos','relatorios','configuracoes','.view:visible']) assert.ok(source.includes(token),`release smoke missing visual QA token ${token}`);
 });
 
 test('windows smoke silently installs, runs smoke, reinstalls and verifies persisted data',async()=>{
