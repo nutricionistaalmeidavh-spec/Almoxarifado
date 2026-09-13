@@ -27,6 +27,10 @@ async function waitForHealth(timeoutMs=60_000){
   }
   throw new Error(`local API did not become healthy: ${lastError?.message||'timeout'}`);
 }
+async function assertSingleVisibleView(page,expectedView){
+  assert.equal(await page.locator('.view:visible').count(),1,`expected exactly one visible view while ${expectedView} is active`);
+  await page.locator(`#view-${expectedView}`).waitFor({state:'visible',timeout:10_000});
+}
 
 async function captureRealUiScreenshots(page){
   if(!screenshotDir||verifyOnly)return [];
@@ -44,7 +48,7 @@ async function captureRealUiScreenshots(page){
   ];
   for(const [view,name] of views){
     await page.locator(`button[data-view="${view}"]`).click();
-    await page.locator(`#view-${view}`).waitFor({state:'visible',timeout:10_000});
+    await assertSingleVisibleView(page,view);
     await page.waitForTimeout(180);
     const file=path.resolve(screenshotDir,`${name}.png`);
     await page.screenshot({path:file,fullPage:true});
@@ -78,9 +82,11 @@ try{
   assert.equal(await page.title(),'ArtiSys Almoxarifado');
   assert.ok(await page.locator('.nav-icon').count()>=10,'UI v2 sidebar icons were not rendered');
   assert.equal(await page.locator('.metric-card').count(),4,'UI v2 dashboard metric cards were not rendered');
+  await assertSingleVisibleView(page,'dashboard');
 
   if(!verifyOnly){
     await page.locator('button[data-view="cadastros"]').click();
+    await assertSingleVisibleView(page,'cadastros');
     await page.locator('#product-form input[name="sku"]').fill(sku);
     await page.locator('#product-form input[name="name"]').fill(`Produto ${sku}`);
     await page.locator('#product-form input[name="unit"]').fill('un');
@@ -91,6 +97,7 @@ try{
     await page.locator('#products-table').filter({hasText:sku}).waitFor({state:'visible',timeout:20_000});
 
     await page.locator('button[data-view="movimentacoes"]').click();
+    await assertSingleVisibleView(page,'movimentacoes');
     await page.locator('[data-movement-type="EXIT"]').click();
     assert.equal(await page.locator('#movement-form select[name="type"]').inputValue(),'EXIT','UI v2 movement shortcut did not update the operation type');
     await page.locator('[data-movement-type="ENTRY"]').click();
@@ -108,6 +115,7 @@ try{
   }
 
   await page.locator('button[data-view="dashboard"]').click();
+  await assertSingleVisibleView(page,'dashboard');
   const productsText=await page.locator('#metric-products').textContent();
   const unitsText=await page.locator('#metric-units').textContent();
   const metricNumber=(value)=>Number(String(value??'').replace(/[^0-9,-]/g,'').replace(/\./g,'').replace(',','.'));
