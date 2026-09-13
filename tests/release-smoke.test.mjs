@@ -9,6 +9,11 @@ test('release browser smoke covers installed usability path',async()=>{
   for(const token of ["from 'playwright'","/api/health","/api/auth/status","#auth-form","#app-shell","#product-form","#movement-form","#metric-products","#metric-units","/api/bootstrap","ALMOX_QA_SKU","verify-only"]) assert.match(source,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
 
+test('release smoke captures real UI v2 screenshots from installed app',async()=>{
+  const source=await read('scripts/release-smoke.mjs');
+  for(const token of ['ALMOX_SCREENSHOT_DIR','page.screenshot','dashboard','cadastros','movimentacoes','inventario','compras','documentos','relatorios','configuracoes']) assert.ok(source.includes(token),`release smoke missing visual QA token ${token}`);
+});
+
 test('windows smoke silently installs, runs smoke, reinstalls and verifies persisted data',async()=>{
   const source=await read('scripts/windows-installed-smoke.ps1');
   assert.match(source,/\/S/);
