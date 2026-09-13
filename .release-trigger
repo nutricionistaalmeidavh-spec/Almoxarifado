@@ -1,3 +1,4 @@
-ArtiSys Almoxarifado 1.0.0 — final release validation trigger
-retry: electron-builder publish disabled
-visual-fix: hidden visibility regression corrected
+ArtiSys Almoxarifado 1.0.0 — UI v2 final release validation trigger
+ui-v2: deliveries 1-10 integrated
+visual-qa: capture 8 real installed-app screenshots
+release: rebuild, reinstall smoke, hash and approved artifact
