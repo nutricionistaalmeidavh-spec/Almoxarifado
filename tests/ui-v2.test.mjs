@@ -4,6 +4,8 @@ import fs from 'node:fs';
 
 const css = fs.readFileSync(new URL('../apps/web/styles.css', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../apps/web/index.html', import.meta.url), 'utf8');
+const sw = fs.readFileSync(new URL('../apps/web/sw.js', import.meta.url), 'utf8');
+const uiModulePath = new URL('../apps/web/ui-v2.js', import.meta.url);
 
 function has(pattern, source, message) {
   assert.match(source, pattern, message);
@@ -42,6 +44,16 @@ test('settings and operational screens expose v2 grouping hooks', () => {
   has(/data-settings-target="backup"/, html, 'backup settings tab missing');
   has(/class="empty-state"/, html, 'improved empty state missing');
   has(/class="panel panel-accent"/, html, 'accent panel hook missing');
+});
+
+test('presentation behavior is isolated and cached for local-first use', () => {
+  assert.equal(fs.existsSync(uiModulePath), true, 'ui-v2.js presentation module missing');
+  const ui = fs.readFileSync(uiModulePath, 'utf8');
+  has(/data-movement-type/, ui, 'movement shortcut behavior missing');
+  has(/data-settings-target/, ui, 'settings tab behavior missing');
+  has(/MutationObserver/, ui, 'dynamic table decoration missing');
+  has(/<script type="module" src="\/ui-v2\.js"><\/script>/, html, 'ui-v2.js is not loaded');
+  has(/['"]\/ui-v2\.js['"]/, sw, 'ui-v2.js is not in the offline shell');
 });
 
 test('responsive and accessibility rules are present', () => {
