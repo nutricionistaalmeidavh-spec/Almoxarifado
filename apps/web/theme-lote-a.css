@@ -1,0 +1,20 @@
+:root{
+  --color-sidebar:#12343b;
+  --color-sidebar-active:#1d4f59;
+  --color-primary:#0f6674;
+  --color-primary-hover:#0b5260;
+  --color-info:#0e7490;
+  --shadow-md:0 10px 28px rgba(18,52,59,.08);
+}
+
+.brand-mark{background:linear-gradient(145deg,#0f6674,#12343b);box-shadow:0 6px 18px rgba(15,102,116,.24)}
+.sidebar{background:linear-gradient(180deg,#12343b 0%,#0d2930 100%)}
+.nav button:hover{background:#173f48}
+.nav button.active{background:#1d4f59;box-shadow:inset 3px 0 0 #4fb3bf}
+.metric-products{--metric-color:#0f6674}
+.metric-units{--metric-color:#0e7490}
+.panel-accent{border-left-color:#0f6674}
+.operation-tab.active{background:#eef9fa}
+:focus-visible{outline-color:rgba(15,102,116,.30)}
+.field input:focus-visible,.field select:focus-visible,.toolbar input:focus-visible,.toolbar select:focus-visible,.form-grid input:focus-visible,.form-grid select:focus-visible{border-color:#0f6674;box-shadow:0 0 0 3px rgba(15,102,116,.14)}
+@media(max-width:760px){.nav button.active{box-shadow:inset 0 -3px 0 #4fb3bf}}
