@@ -15,6 +15,11 @@ test('UI v2 keeps the hidden visibility regression guard', () => {
   has(/\[hidden\]\s*\{\s*display\s*:\s*none\s*!important\s*\}/i, css, 'hidden elements must always remain hidden');
 });
 
+test('UI v2 only renders the active application view', () => {
+  has(/\.view\s*\{\s*display\s*:\s*none\s*\}/i, css, 'inactive views must remain hidden');
+  has(/\.view\.active\s*\{\s*display\s*:\s*block\s*\}/i, css, 'the active view must be visible');
+});
+
 test('UI v2 exposes the approved design tokens', () => {
   has(/--color-sidebar\s*:\s*#0f172a/i, css, 'sidebar token missing');
   has(/--color-primary\s*:\s*#2563eb/i, css, 'primary token missing');
