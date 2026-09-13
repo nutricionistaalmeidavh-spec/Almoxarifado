@@ -9,6 +9,11 @@ test('final release workflow validates Linux and installed Windows artifact',asy
   assert.ok(!yml.includes('submodules: recursive'),'final workflow must not depend on sibling private submodule');
 });
 
+test('final release workflow publishes real UI v2 screenshots as a QA artifact',async()=>{
+  const yml=await read('.github/workflows/release-final.yml');
+  for(const token of ['ALMOX_SCREENSHOT_DIR','qa-artifacts/ui-v2','ui-v2-real-screenshots']) assert.ok(yml.includes(token),`workflow missing visual QA token ${token}`);
+});
+
 test('one-time release trigger documents its purpose',async()=>{
   const trigger=await read('.release-trigger');
   assert.match(trigger,/1\.0\.0/);
