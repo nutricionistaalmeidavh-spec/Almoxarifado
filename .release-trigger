@@ -1,4 +1,5 @@
 ArtiSys Almoxarifado 1.0.0 — UI v2 final release validation trigger
 ui-v2: deliveries 1-10 integrated
 visual-qa: capture 8 real installed-app screenshots
+visual-fix: inactive views hidden; exactly one application view visible
 release: rebuild, reinstall smoke, hash and approved artifact
