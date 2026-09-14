@@ -37,3 +37,12 @@ test('sqlite repository imports legacy json once and preserves migration backup'
   reopened.close();
   rmSync(dir,{recursive:true,force:true});
 });
+
+test('fresh sqlite database preserves default local admin and main warehouse',()=>{
+  const dir=mkdtempSync(path.join(os.tmpdir(),'almox-default-'));
+  const repo=createSqliteStockRepository({dbPath:path.join(dir,'almoxarifado.sqlite')});
+  assert.equal(repo.getWarehouse('main').code,'ALM-01');
+  assert.equal(repo.getUser('local-admin').login,'admin');
+  repo.close();
+  rmSync(dir,{recursive:true,force:true});
+});
