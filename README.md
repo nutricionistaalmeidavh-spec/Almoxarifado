@@ -149,7 +149,52 @@ A área **P1 Comercial** amplia o almoxarifado sem transformar o produto em um E
 - Inventários cíclicos vencidos.
 - Falhas do backup automático.
 
-Todos esses recursos funcionam com a base SQLite local e a API/PWA na LAN. E-mail, WhatsApp ou outros serviços externos continuam opcionais e não fazem parte da dependência obrigatória do core.
+## P2 — Maior retorno comercial
+
+A área **P2 Gestão** adiciona recursos de governança e produtividade para clientes médios/maiores sem exigir cloud.
+
+### Campos personalizados
+- Campos adicionais por produto, fornecedor, patrimônio, obra, solicitação e pedido de compra.
+- Tipos `TEXT`, `NUMBER`, `DATE`, `BOOLEAN` e `SELECT`.
+- Campos obrigatórios e opções controladas.
+- Valores ficam persistidos e auditados sem alterar o schema físico para cada cliente.
+
+### Matriz de aprovação por valor
+- Regras por faixa de valor, papel e etapa.
+- Aprovação sequencial quando houver mais de uma etapa.
+- Instâncias registram quem aprovou/rejeitou e quando.
+- Se existir regra aplicável ao valor, a criação do pedido de compra é bloqueada até a matriz correspondente estar aprovada.
+- Sem regra aplicável, o fluxo de compras anterior continua funcionando normalmente.
+
+### KPI de fornecedores
+- Quantidade de pedidos e valor comprado.
+- Prazo médio de entrega e percentual entregue no prazo.
+- Taxas de aceitação, rejeição e avaria.
+- Variação de preço baseada no histórico local.
+- Ranking calculado localmente a partir de pedidos e recebimentos.
+
+### Manutenção e calibração
+- Planos recorrentes vinculados ao patrimônio.
+- Frequência em dias e próxima data prevista.
+- Estados `OK`, `DUE_SOON` e `OVERDUE`.
+- Registro de execução, responsável, certificado, observações e medições.
+- Concluir um plano agenda automaticamente a próxima ocorrência.
+
+### Kits / BOM
+- Kits virtuais compostos por produtos e quantidades.
+- Cálculo de quantos kits podem ser atendidos pelo estoque atual.
+- Baixa transacional de todos os componentes com movimento `KIT_ISSUE`.
+- O kit não cria saldo artificial: o estoque continua sendo dos componentes reais.
+
+### XML de NF-e
+- Leitura local de XML, sem API fiscal externa obrigatória.
+- Extrai chave, emitente/CNPJ, itens, SKU, GTIN, unidade, quantidade, custo, NCM, CFOP, total e rastreabilidade de lote/validade quando presente.
+- Preview faz matching com fornecedor e produtos existentes.
+- Pode criar cadastros ausentes.
+- Entrada física, custo e lote só são lançados após confirmação explícita do operador.
+- XML com `DOCTYPE`/`ENTITY` é rejeitado e nenhum conteúdo externo é executado.
+
+P0, P1 e P2 usam a mesma persistência SQLite, backup/restauração e API local. Nenhum recurso P2 introduz dependência SaaS paga no núcleo.
 
 ## Desenvolvimento
 
@@ -192,7 +237,7 @@ npm run security
 npm run release:check
 ```
 
-O workflow `.github/workflows/release-final.yml` continua reservado para o fechamento de release Windows. P0 e P1 podem ser validados localmente sem consumir GitHub Actions.
+O workflow `.github/workflows/release-final.yml` continua reservado para o fechamento de release Windows. P0, P1 e P2 podem ser validados localmente sem consumir GitHub Actions.
 
 ## Manual
 
