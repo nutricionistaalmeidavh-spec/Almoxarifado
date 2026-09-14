@@ -8,10 +8,10 @@ test('PWA composes the mobile WMS module and surface',async()=>{
   const app=await read('apps/web/app.js');
   const js=await read('apps/web/wms.js');
   assert.match(app,/import ['"]\.\/wms\.js['"]/);
-  for(const id of['view-wms','wms-location-form','wms-scan-form','wms-mobile-form','wms-cycle-form','wms-locations','wms-pick-plan','wms-cycle-lines'])assert.match(js,new RegExp(id));
+  for(const id of['view-wms','wms-location-form','wms-scan-form','wms-mobile-form','wms-cycle-form','wms-receive-form','wms-locations','wms-pick-plan','wms-cycle-lines'])assert.match(js,new RegExp(id));
 });
 
-test('WMS client calls local addressing scan mobile and cycle endpoints',async()=>{
+test('WMS client calls local addressing receiving scan mobile and cycle endpoints',async()=>{
   const js=await read('apps/web/wms.js');
-  for(const route of['/api/wms/locations','/api/wms/scan','/api/wms/pick','/api/wms/mobile','/api/wms/cycle-counts'])assert.match(js,new RegExp(route.replaceAll('/','\\/')));
+  for(const route of['/api/wms/locations','/api/wms/scan','/api/wms/pick','/api/wms/mobile','/api/wms/cycle-counts','/api/purchases/orders/'])assert.match(js,new RegExp(route.replaceAll('/','\\/')));
 });
