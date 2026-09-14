@@ -99,30 +99,85 @@ A seção **P1 Comercial** concentra os diferenciais adicionais de operação e 
 
 ## Patrimônio e ferramentas
 
-Cadastre ferramentas/equipamentos por tag ou QR, nome, série e categoria. Um ativo pode estar disponível, emprestado, em manutenção ou perdido/inativo. Na retirada, registre responsável, obra/projeto e previsão de devolução; na devolução, registre a condição de retorno.
+Cadastre ferramentas/equipamentos por tag ou QR, nome, série e categoria. Um ativo pode estar:
+
+- disponível;
+- emprestado/retirado;
+- em manutenção;
+- perdido/inativo.
+
+Na retirada, registre o responsável, a obra/projeto e a previsão de devolução. Na devolução, registre a condição de retorno. O sistema impede uma segunda retirada enquanto houver uma retirada aberta e também bloqueia retirada durante manutenção.
 
 ### Fotos e documentos do patrimônio
+
 Dentro de **P1 Comercial > Patrimônio**, use **Foto / documento do patrimônio** para anexar foto, PDF, nota fiscal, comprovante ou outro arquivo. O documento fica armazenado localmente e vinculado ao ativo.
 
 ## Fornecedores por produto
 
-Um produto pode ter vários fornecedores. Para cada vínculo, registre SKU do fornecedor, embalagem, preço, lead time, MOQ e fornecedor preferencial. O lead time pode gerar automaticamente a previsão de entrega do pedido.
+Um produto pode ter vários fornecedores. Para cada vínculo, registre:
+
+- SKU usado pelo fornecedor;
+- embalagem;
+- preço atual e histórico;
+- lead time em dias;
+- MOQ — quantidade mínima de compra;
+- indicação de fornecedor preferencial.
+
+Somente um vínculo fica como preferencial por produto. Quando houver lead time cadastrado, novos pedidos podem receber previsão de entrega automaticamente.
 
 ## Unidades e embalagens
 
-A unidade original do produto continua sendo a unidade base. Cadastre conversões como `1 CX = 12 UN`; cada conversão pode possuir código de barras próprio.
+A unidade original do produto continua sendo a unidade base. Cadastre conversões adicionais, por exemplo:
+
+```text
+1 CX = 12 UN
+1 FD = 6 CX = 72 UN
+```
+
+Cada conversão pode possuir seu próprio código de barras. A API de conversão retorna a quantidade equivalente na unidade base.
 
 ## Qualidade e quarentena
 
-Use **Qualidade / quarentena** quando o material ainda não deve ficar disponível. A liberação gera entrada auditável; a rejeição encerra a quantidade sem incorporá-la ao saldo.
+Use **Qualidade / quarentena** para registrar material que ainda não deve ficar disponível para consumo.
+
+Fluxo:
+
+```text
+Receber para inspeção -> manter em quarentena -> liberar ou rejeitar
+```
+
+Enquanto estiver em quarentena, a quantidade não entra no saldo disponível. A liberação gera uma entrada de estoque auditável. A rejeição encerra a quantidade correspondente sem incorporá-la ao estoque.
+
+A quarentena é um fluxo opcional. O recebimento tradicional continua disponível para materiais que não exigem inspeção.
 
 ## Reposição avançada
 
-A tela considera consumo médio diário, estoque físico/reservas, lead time, dias de segurança, estoque de segurança, cobertura, MOQ e fornecedor preferencial.
+A tela calcula sugestões usando:
+
+- consumo médio diário no período selecionado;
+- estoque físico e reservas;
+- lead time do fornecedor preferencial;
+- dias de segurança;
+- estoque de segurança;
+- ponto de reposição;
+- cobertura estimada em dias;
+- MOQ;
+- fornecedor preferencial e custo estimado.
+
+Esses cálculos são locais e estatísticos; não dependem de serviço de IA ou API externa.
 
 ## Central de alertas
 
-A central reúne estoque abaixo do mínimo/ruptura, validade, pedido atrasado, ferramenta vencida, inventário cíclico vencido e falha de backup.
+A central reúne automaticamente:
+
+- estoque abaixo do mínimo ou ruptura;
+- lote próximo da validade;
+- pedido de compra atrasado;
+- ferramenta com devolução vencida;
+- inventário cíclico vencido;
+- falha de backup automático.
+
+Os alertas são calculados/persistidos localmente. E-mail, WhatsApp ou notificações externas podem ser integrados futuramente, mas não são dependência obrigatória.
 
 # P2 Gestão
 
@@ -207,13 +262,17 @@ A pré-visualização não altera estoque. A entrada física e o custo só são 
 
 Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1/P2 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
 
+Falhas no backup automático também passam a gerar alerta crítico local.
+
 ## Atualização
 
-A atualização 1.x é feita executando um novo instalador sobre a instalação existente. A atualização substitui arquivos do aplicativo e **não apaga os dados** armazenados no diretório de usuário. Antes de qualquer atualização operacional, recomenda-se criar um backup pelo próprio sistema.
+A atualização 1.x é feita executando um novo instalador sobre a instalação existente. A atualização substitui arquivos do aplicativo e **não apaga os dados** armazenados no diretório de usuário.
+
+A migração de JSON para SQLite ocorre automaticamente apenas quando aplicável e quando o banco SQLite ainda está vazio. Antes de qualquer atualização operacional, recomenda-se criar um backup pelo próprio sistema.
 
 ## Desinstalação
 
-A desinstalação padrão remove o aplicativo instalado, mas **não remove os dados do usuário** automaticamente.
+A desinstalação padrão remove o aplicativo instalado, mas **não remove os dados do usuário** automaticamente. Isso evita perder estoque, documentos e backups por uma desinstalação acidental.
 
 ## Leitor, câmera, impressora e balança
 
