@@ -1,6 +1,6 @@
 function clone(value) { return value == null ? value : structuredClone(value); }
 function balanceKey(productId, warehouseId) { return `${productId}::${warehouseId}`; }
-const MAP_COLLECTIONS = ['categories','suppliers','products','warehouses','users','costCenters','projects','departments','purchaseRequests','purchaseOrders','receipts','reservations','lots','serials','transitTransfers','inventories','documents','hardwareSettings'];
+const MAP_COLLECTIONS = ['categories','suppliers','products','warehouses','users','costCenters','projects','departments','purchaseRequests','purchaseOrders','receipts','reservations','lots','serials','transitTransfers','inventories','documents','hardwareSettings','locations','stockPositions','cycleCounts','cycleCountLines'];
 
 export function createMemoryStockRepository(seed = {}) {
   const state = { balances: new Map(), movements: [], counts: new Map(), priceHistory: [] };
@@ -44,6 +44,10 @@ export function createMemoryStockRepository(seed = {}) {
     getTransitTransfer: (id) => getMap('transitTransfers', id), listTransitTransfers: () => listMap('transitTransfers'), saveTransitTransfer: (item) => saveTo(state.transitTransfers, item),
     getDocument: (id) => getMap('documents', id), listDocuments: () => listMap('documents'), saveDocument: (item) => saveTo(state.documents, item),
     getHardwareSetting: (id) => getMap('hardwareSettings', id), listHardwareSettings: () => listMap('hardwareSettings'), saveHardwareSetting: (item) => saveTo(state.hardwareSettings, item),
+    getLocation: (id) => getMap('locations', id), listLocations: () => listMap('locations'), saveLocation: (item) => saveTo(state.locations, item),
+    getStockPosition: (id) => getMap('stockPositions', id), listStockPositions: () => listMap('stockPositions'), saveStockPosition: (item) => saveTo(state.stockPositions, item),
+    getCycleCount: (id) => getMap('cycleCounts', id), listCycleCounts: () => listMap('cycleCounts'), saveCycleCount: (item) => saveTo(state.cycleCounts, item),
+    getCycleCountLine: (id) => getMap('cycleCountLines', id), listCycleCountLines: (cycleCountId = null) => listMap('cycleCountLines').filter((item) => !cycleCountId || item.cycleCountId === cycleCountId), saveCycleCountLine: (item) => saveTo(state.cycleCountLines, item),
     getBalance: (productId, warehouseId) => state.balances.get(balanceKey(productId, warehouseId)) ?? 0,
     setBalance(productId, warehouseId, quantity) { state.balances.set(balanceKey(productId, warehouseId), quantity); return quantity; },
     listBalances() { return [...state.balances.entries()].map(([key, quantity]) => { const [productId, warehouseId] = key.split('::'); return { productId, warehouseId, quantity }; }); },
