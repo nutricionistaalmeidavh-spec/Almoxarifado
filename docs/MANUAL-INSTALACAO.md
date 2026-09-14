@@ -1,4 +1,4 @@
-# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + WMS + P1 Comercial
+# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + WMS + P1 + P2
 
 ## Requisitos
 
@@ -10,7 +10,7 @@
 
 ## Instalação
 
-1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore WMS/P1.
+1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore WMS/P1/P2.
 2. Confirme a instalação para o usuário atual.
 3. Ao concluir, abra **ArtiSys Almoxarifado** pelo atalho da Área de Trabalho ou Menu Iniciar.
 4. O aplicativo inicia o servidor local e abre a interface do almoxarifado.
@@ -99,101 +99,121 @@ A seção **P1 Comercial** concentra os diferenciais adicionais de operação e 
 
 ## Patrimônio e ferramentas
 
-Cadastre ferramentas/equipamentos por tag ou QR, nome, série e categoria. Um ativo pode estar:
-
-- disponível;
-- emprestado/retirado;
-- em manutenção;
-- perdido/inativo.
-
-Na retirada, registre o responsável, a obra/projeto e a previsão de devolução. Na devolução, registre a condição de retorno. O sistema impede uma segunda retirada enquanto houver uma retirada aberta e também bloqueia retirada durante manutenção.
+Cadastre ferramentas/equipamentos por tag ou QR, nome, série e categoria. Um ativo pode estar disponível, emprestado, em manutenção ou perdido/inativo. Na retirada, registre responsável, obra/projeto e previsão de devolução; na devolução, registre a condição de retorno.
 
 ### Fotos e documentos do patrimônio
-
 Dentro de **P1 Comercial > Patrimônio**, use **Foto / documento do patrimônio** para anexar foto, PDF, nota fiscal, comprovante ou outro arquivo. O documento fica armazenado localmente e vinculado ao ativo.
 
 ## Fornecedores por produto
 
-Um produto pode ter vários fornecedores. Para cada vínculo, registre:
-
-- SKU usado pelo fornecedor;
-- embalagem;
-- preço atual e histórico;
-- lead time em dias;
-- MOQ — quantidade mínima de compra;
-- indicação de fornecedor preferencial.
-
-Somente um vínculo fica como preferencial por produto. Quando houver lead time cadastrado, novos pedidos podem receber previsão de entrega automaticamente.
+Um produto pode ter vários fornecedores. Para cada vínculo, registre SKU do fornecedor, embalagem, preço, lead time, MOQ e fornecedor preferencial. O lead time pode gerar automaticamente a previsão de entrega do pedido.
 
 ## Unidades e embalagens
 
-A unidade original do produto continua sendo a unidade base. Cadastre conversões adicionais, por exemplo:
-
-```text
-1 CX = 12 UN
-1 FD = 6 CX = 72 UN
-```
-
-Cada conversão pode possuir seu próprio código de barras. A API de conversão retorna a quantidade equivalente na unidade base.
+A unidade original do produto continua sendo a unidade base. Cadastre conversões como `1 CX = 12 UN`; cada conversão pode possuir código de barras próprio.
 
 ## Qualidade e quarentena
 
-Use **Qualidade / quarentena** para registrar material que ainda não deve ficar disponível para consumo.
-
-Fluxo:
-
-```text
-Receber para inspeção -> manter em quarentena -> liberar ou rejeitar
-```
-
-Enquanto estiver em quarentena, a quantidade não entra no saldo disponível. A liberação gera uma entrada de estoque auditável. A rejeição encerra a quantidade correspondente sem incorporá-la ao estoque.
-
-A quarentena é um fluxo opcional. O recebimento tradicional continua disponível para materiais que não exigem inspeção.
+Use **Qualidade / quarentena** quando o material ainda não deve ficar disponível. A liberação gera entrada auditável; a rejeição encerra a quantidade sem incorporá-la ao saldo.
 
 ## Reposição avançada
 
-A tela calcula sugestões usando:
-
-- consumo médio diário no período selecionado;
-- estoque físico e reservas;
-- lead time do fornecedor preferencial;
-- dias de segurança;
-- estoque de segurança;
-- ponto de reposição;
-- cobertura estimada em dias;
-- MOQ;
-- fornecedor preferencial e custo estimado.
-
-Esses cálculos são locais e estatísticos; não dependem de serviço de IA ou API externa.
+A tela considera consumo médio diário, estoque físico/reservas, lead time, dias de segurança, estoque de segurança, cobertura, MOQ e fornecedor preferencial.
 
 ## Central de alertas
 
-A central reúne automaticamente:
+A central reúne estoque abaixo do mínimo/ruptura, validade, pedido atrasado, ferramenta vencida, inventário cíclico vencido e falha de backup.
 
-- estoque abaixo do mínimo ou ruptura;
-- lote próximo da validade;
-- pedido de compra atrasado;
-- ferramenta com devolução vencida;
-- inventário cíclico vencido;
-- falha de backup automático.
+# P2 Gestão
 
-Os alertas são calculados/persistidos localmente. E-mail, WhatsApp ou notificações externas podem ser integrados futuramente, mas não são dependência obrigatória.
+A seção **P2 Gestão** concentra recursos de governança comercial e automação administrativa.
+
+## Campos personalizados
+
+Em **P2 Gestão > Campos personalizados**:
+
+1. escolha a entidade: produto, fornecedor, patrimônio, obra, solicitação ou pedido;
+2. informe a chave e o nome do campo;
+3. escolha `TEXT`, `NUMBER`, `DATE`, `BOOLEAN` ou `SELECT`;
+4. para `SELECT`, informe as opções permitidas;
+5. marque como obrigatório quando necessário.
+
+Os valores são salvos separadamente do cadastro-base, permitindo personalizar clientes sem criar outra versão do sistema. O painel também permite informar o ID do registro e um objeto JSON com os valores personalizados.
+
+## Matriz de aprovação por valor
+
+Cadastre regras por faixa, papel e etapa. Exemplo:
+
+```text
+R$ 0 a R$ 1.999,99      -> ALMOXARIFE / etapa 1
+R$ 2.000 a R$ 9.999,99 -> GESTOR / etapa 1
+Acima de R$ 10.000      -> ADMIN / etapa 1
+```
+
+Para compras sujeitas à matriz:
+
+1. informe o ID da solicitação e o valor total;
+2. gere a instância de aprovação;
+3. cada papel necessário aprova sua etapa;
+4. somente após o status `APPROVED` o pedido poderá ser criado para aquele valor.
+
+Se nenhuma regra se aplicar, o fluxo tradicional de compras continua funcionando.
+
+## KPI de fornecedores
+
+O painel calcula automaticamente, usando dados locais:
+
+- quantidade de pedidos;
+- valor comprado;
+- prazo médio real;
+- percentual entregue no prazo;
+- taxa de aceitação;
+- rejeições e avarias;
+- variação de preço.
+
+O ranking não depende de API externa.
+
+## Manutenção / calibração
+
+Crie um plano escolhendo o patrimônio, tipo (`MAINTENANCE` ou `CALIBRATION`), intervalo em dias e próxima data. O sistema identifica itens próximos do prazo e vencidos. Ao concluir um plano, informe certificado/referência quando houver; a próxima data é recalculada automaticamente.
+
+## Kits / BOM
+
+Cadastre um kit com código, nome e componentes. Na interface, use uma linha por componente no formato:
+
+```text
+SKU;quantidade
+PARAFUSO-01;4
+BUCHA-02;4
+```
+
+Ao baixar um kit, escolha depósito e quantidade. O sistema confere todos os componentes antes da operação e baixa tudo de forma transacional com movimento `KIT_ISSUE`.
+
+## Importar XML NF-e
+
+Em **P2 Gestão > Importar XML NF-e**:
+
+1. selecione o arquivo `.xml`;
+2. selecione o depósito;
+3. use **Pré-visualizar** para conferir fornecedor, valor e itens;
+4. somente depois use **Importar e lançar estoque**;
+5. confirme a operação.
+
+O parser local extrai emitente/CNPJ, produtos, SKU, GTIN, unidade, quantidade, custo, NCM, CFOP, total e, quando existir no XML, lote e validade. O sistema tenta relacionar fornecedor por documento e produto por SKU/código de barras; cadastros ausentes podem ser criados automaticamente.
+
+A pré-visualização não altera estoque. A entrada física e o custo só são gravados após confirmação explícita. XML com `DOCTYPE` ou `ENTITY` é rejeitado por segurança.
 
 ## Backup e restauração
 
-Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
-
-Falhas no backup automático também passam a gerar alerta crítico local.
+Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1/P2 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
 
 ## Atualização
 
-A atualização 1.x é feita executando um novo instalador sobre a instalação existente. A atualização substitui arquivos do aplicativo e **não apaga os dados** armazenados no diretório de usuário.
-
-A migração de JSON para SQLite ocorre automaticamente apenas quando aplicável e quando o banco SQLite ainda está vazio. Antes de qualquer atualização operacional, recomenda-se criar um backup pelo próprio sistema.
+A atualização 1.x é feita executando um novo instalador sobre a instalação existente. A atualização substitui arquivos do aplicativo e **não apaga os dados** armazenados no diretório de usuário. Antes de qualquer atualização operacional, recomenda-se criar um backup pelo próprio sistema.
 
 ## Desinstalação
 
-A desinstalação padrão remove o aplicativo instalado, mas **não remove os dados do usuário** automaticamente. Isso evita perder estoque, documentos e backups por uma desinstalação acidental.
+A desinstalação padrão remove o aplicativo instalado, mas **não remove os dados do usuário** automaticamente.
 
 ## Leitor, câmera, impressora e balança
 
