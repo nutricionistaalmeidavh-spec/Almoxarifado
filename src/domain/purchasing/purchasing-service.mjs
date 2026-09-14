@@ -3,84 +3,42 @@ import { DomainError, requireId, requirePositiveNumber } from '../shared/domain-
 
 function normalizeItems(items) {
   if (!Array.isArray(items) || items.length === 0) throw new DomainError('INVALID_ITEMS', 'at least one item is required');
-  return items.map((item) => ({
-    productId: requireId(item.productId, 'productId'),
-    quantity: requirePositiveNumber(Number(item.quantity)),
-    unitCost: item.unitCost == null ? null : requirePositiveNumber(Number(item.unitCost), 'unitCost')
-  }));
+  return items.map((item) => ({ productId:requireId(item.productId,'productId'), quantity:requirePositiveNumber(Number(item.quantity)), unitCost:item.unitCost==null?null:requirePositiveNumber(Number(item.unitCost),'unitCost') }));
 }
-function ensure(repository, getter, id, code, label) {
-  const entity = repository[getter](requireId(id, `${label}Id`));
-  if (!entity || entity.active === false) throw new DomainError(code, `${label} not found`, { id });
-  return entity;
-}
+function ensure(repository,getter,id,code,label){const entity=repository[getter](requireId(id,`${label}Id`));if(!entity||entity.active===false)throw new DomainError(code,`${label} not found`,{id});return entity;}
+function withReceiptState(item,idFactory){const quantity=Number(item.quantity);return{...item,lineId:item.lineId??idFactory(),deliveredQuantity:Number(item.deliveredQuantity??0),acceptedQuantity:Number(item.acceptedQuantity??0),rejectedQuantity:Number(item.rejectedQuantity??0),damagedQuantity:Number(item.damagedQuantity??0),pendingQuantity:Number(item.pendingQuantity??quantity)};}
 
 export function createPurchasingService({ repository, stock, recordCost = async () => {}, now = () => new Date().toISOString(), idFactory = randomUUID } = {}) {
   if (!repository || !stock) throw new TypeError('repository and stock service are required');
   return {
-    createRequest({ warehouseId, items, requestedBy, notes = '' }) {
-      ensure(repository,'getWarehouse',warehouseId,'WAREHOUSE_NOT_FOUND','warehouse');
-      ensure(repository,'getUser',requestedBy,'USER_NOT_FOUND','user');
-      const normalized = normalizeItems(items);
-      for (const item of normalized) ensure(repository,'getProduct',item.productId,'PRODUCT_NOT_FOUND','product');
-      return repository.savePurchaseRequest({ id:idFactory(), warehouseId, items:normalized.map(({unitCost,...item})=>item), requestedBy, notes:String(notes).trim(), status:'REQUESTED', quotes:[], createdAt:now(), approvedAt:null, approvedBy:null });
-    },
-    addQuote({ requestId, supplierId, items, userId }) {
-      const request = repository.getPurchaseRequest(requireId(requestId,'requestId'));
-      if (!request) throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');
-      if (!['REQUESTED','QUOTED'].includes(request.status)) throw new DomainError('INVALID_PURCHASE_STATUS','request cannot receive quotes',{status:request.status});
-      ensure(repository,'getSupplier',supplierId,'SUPPLIER_NOT_FOUND','supplier');
-      ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');
-      const quotedItems = normalizeItems(items);
-      const quote = { id:idFactory(), supplierId, items:quotedItems, quotedBy:userId, quotedAt:now(), total:quotedItems.reduce((sum,item)=>sum + item.quantity*item.unitCost,0) };
-      const saved = { ...request, status:'QUOTED', quotes:[...(request.quotes??[]), quote] };
-      repository.savePurchaseRequest(saved);
-      return quote;
-    },
-    approveRequest({ requestId, userId }) {
-      const request = repository.getPurchaseRequest(requireId(requestId,'requestId'));
-      if (!request) throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');
-      if (!['REQUESTED','QUOTED'].includes(request.status)) throw new DomainError('INVALID_PURCHASE_STATUS','request cannot be approved',{status:request.status});
-      ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');
-      return repository.savePurchaseRequest({ ...request, status:'APPROVED', approvedAt:now(), approvedBy:userId });
-    },
-    createOrder({ requestId, supplierId, quoteId = null, userId }) {
-      const request = repository.getPurchaseRequest(requireId(requestId,'requestId'));
-      if (!request) throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');
-      if (request.status !== 'APPROVED') throw new DomainError('PURCHASE_NOT_APPROVED','purchase request must be approved');
-      ensure(repository,'getSupplier',supplierId,'SUPPLIER_NOT_FOUND','supplier');
-      ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');
-      const quote = quoteId ? (request.quotes??[]).find((item)=>item.id===quoteId) : (request.quotes??[]).find((item)=>item.supplierId===supplierId);
-      if (quoteId && !quote) throw new DomainError('QUOTE_NOT_FOUND','quote not found',{quoteId});
-      if (quote && quote.supplierId !== supplierId) throw new DomainError('QUOTE_SUPPLIER_MISMATCH','quote does not belong to selected supplier',{quoteId:quote.id,supplierId});
-      const items = quote?.items ?? request.items.map((item)=>({ ...item, unitCost:0 }));
-      if (items.some((item)=>!Number.isFinite(item.unitCost) || item.unitCost <= 0)) throw new DomainError('UNIT_COST_REQUIRED','approved order requires unit cost for every item');
-      const order = repository.savePurchaseOrder({ id:idFactory(), requestId, supplierId, warehouseId:request.warehouseId, items:items.map((item)=>({...item})), status:'ORDERED', orderedBy:userId, orderedAt:now(), receivedAt:null, receivedBy:null, total:items.reduce((sum,item)=>sum+item.quantity*item.unitCost,0) });
-      repository.savePurchaseRequest({ ...request, status:'ORDERED', orderId:order.id });
-      return order;
-    },
-    async receiveOrder({ orderId, userId }) {
-      const order = repository.getPurchaseOrder(requireId(orderId,'orderId'));
-      if (!order) throw new DomainError('PURCHASE_ORDER_NOT_FOUND','purchase order not found');
-      if (order.status !== 'ORDERED') throw new DomainError('INVALID_PURCHASE_STATUS','order is not open for receiving',{status:order.status});
-      ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');
-      const receiptId = idFactory();
-      const receivedAt = now();
-      const receipt = await repository.transaction(async () => {
-        const movements = [];
-        for (const item of order.items) {
-          const before = repository.getBalance(item.productId, order.warehouseId);
-          const movement = await stock.entry({ productId:item.productId, warehouseId:order.warehouseId, quantity:item.quantity, userId, reason:`Recebimento pedido ${order.id}` });
-          movements.push(movement.id);
-          await recordCost({ productId:item.productId, supplierId:order.supplierId, warehouseId:order.warehouseId, quantity:item.quantity, unitCost:item.unitCost, previousQuantity:before, userId, sourceType:'PURCHASE_ORDER', sourceId:order.id, occurredAt:receivedAt });
+    createRequest({warehouseId,items,requestedBy,notes=''}){ensure(repository,'getWarehouse',warehouseId,'WAREHOUSE_NOT_FOUND','warehouse');ensure(repository,'getUser',requestedBy,'USER_NOT_FOUND','user');const normalized=normalizeItems(items);for(const item of normalized)ensure(repository,'getProduct',item.productId,'PRODUCT_NOT_FOUND','product');return repository.savePurchaseRequest({id:idFactory(),warehouseId,items:normalized.map(({unitCost,...item})=>item),requestedBy,notes:String(notes).trim(),status:'REQUESTED',quotes:[],createdAt:now(),approvedAt:null,approvedBy:null});},
+    addQuote({requestId,supplierId,items,userId}){const request=repository.getPurchaseRequest(requireId(requestId,'requestId'));if(!request)throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');if(!['REQUESTED','QUOTED'].includes(request.status))throw new DomainError('INVALID_PURCHASE_STATUS','request cannot receive quotes',{status:request.status});ensure(repository,'getSupplier',supplierId,'SUPPLIER_NOT_FOUND','supplier');ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');const quotedItems=normalizeItems(items);const quote={id:idFactory(),supplierId,items:quotedItems,quotedBy:userId,quotedAt:now(),total:quotedItems.reduce((sum,item)=>sum+item.quantity*item.unitCost,0)};repository.savePurchaseRequest({...request,status:'QUOTED',quotes:[...(request.quotes??[]),quote]});return quote;},
+    approveRequest({requestId,userId}){const request=repository.getPurchaseRequest(requireId(requestId,'requestId'));if(!request)throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');if(!['REQUESTED','QUOTED'].includes(request.status))throw new DomainError('INVALID_PURCHASE_STATUS','request cannot be approved',{status:request.status});ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');return repository.savePurchaseRequest({...request,status:'APPROVED',approvedAt:now(),approvedBy:userId});},
+    createOrder({requestId,supplierId,quoteId=null,userId}){const request=repository.getPurchaseRequest(requireId(requestId,'requestId'));if(!request)throw new DomainError('PURCHASE_REQUEST_NOT_FOUND','purchase request not found');if(request.status!=='APPROVED')throw new DomainError('PURCHASE_NOT_APPROVED','purchase request must be approved');ensure(repository,'getSupplier',supplierId,'SUPPLIER_NOT_FOUND','supplier');ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');const quote=quoteId?(request.quotes??[]).find(item=>item.id===quoteId):(request.quotes??[]).find(item=>item.supplierId===supplierId);if(quoteId&&!quote)throw new DomainError('QUOTE_NOT_FOUND','quote not found',{quoteId});if(quote&&quote.supplierId!==supplierId)throw new DomainError('QUOTE_SUPPLIER_MISMATCH','quote does not belong to selected supplier',{quoteId:quote.id,supplierId});const items=(quote?.items??request.items.map(item=>({...item,unitCost:0}))).map(item=>withReceiptState({...item},idFactory));if(items.some(item=>!Number.isFinite(item.unitCost)||item.unitCost<=0))throw new DomainError('UNIT_COST_REQUIRED','approved order requires unit cost for every item');const order=repository.savePurchaseOrder({id:idFactory(),requestId,supplierId,warehouseId:request.warehouseId,items,status:'ORDERED',orderedBy:userId,orderedAt:now(),receivedAt:null,receivedBy:null,total:items.reduce((sum,item)=>sum+item.quantity*item.unitCost,0)});repository.savePurchaseRequest({...request,status:'ORDERED',orderId:order.id});return order;},
+    async receiveOrder({orderId,userId,items=null}){
+      const order=repository.getPurchaseOrder(requireId(orderId,'orderId'));if(!order)throw new DomainError('PURCHASE_ORDER_NOT_FOUND','purchase order not found');if(!['ORDERED','PARTIALLY_RECEIVED'].includes(order.status))throw new DomainError('INVALID_PURCHASE_STATUS','order is not open for receiving',{status:order.status});ensure(repository,'getUser',userId,'USER_NOT_FOUND','user');
+      const currentItems=order.items.map(item=>withReceiptState(item,idFactory));
+      const requested=items==null?currentItems.filter(x=>x.pendingQuantity>0).map(x=>({productId:x.productId,quantity:x.pendingQuantity})):items;
+      if(!Array.isArray(requested)||requested.length===0)throw new DomainError('INVALID_ITEMS','at least one receiving item is required');
+      const receiptId=idFactory(),receivedAt=now();
+      return repository.transaction(async()=>{
+        const movements=[],receiptItems=[];
+        for(const input of requested){
+          const line=currentItems.find(x=>(input.lineId&&x.lineId===input.lineId)||(!input.lineId&&x.productId===input.productId));if(!line)throw new DomainError('PURCHASE_ORDER_ITEM_NOT_FOUND','purchase order item not found',{productId:input.productId,lineId:input.lineId});
+          const delivered=Number(input.quantity);requirePositiveNumber(delivered,'quantity');if(delivered>line.pendingQuantity)throw new DomainError('RECEIPT_EXCEEDS_PENDING','received quantity exceeds pending quantity',{productId:line.productId,pending:line.pendingQuantity,received:delivered});
+          const accepted=input.acceptedQuantity==null&&input.rejectedQuantity==null&&input.damagedQuantity==null?delivered:Number(input.acceptedQuantity??0);const rejected=Number(input.rejectedQuantity??0),damaged=Number(input.damagedQuantity??0);
+          for(const [name,value] of [['acceptedQuantity',accepted],['rejectedQuantity',rejected],['damagedQuantity',damaged]])if(!Number.isFinite(value)||value<0)throw new DomainError('INVALID_RECEIPT_QUANTITY',`${name} must be a non-negative number`,{name,value});
+          if(accepted+rejected+damaged!==delivered)throw new DomainError('RECEIPT_BREAKDOWN_MISMATCH','accepted + rejected + damaged must equal delivered quantity',{delivered,accepted,rejected,damaged});
+          if(accepted>0){const before=repository.getBalance(line.productId,order.warehouseId);const movement=await stock.entry({productId:line.productId,warehouseId:order.warehouseId,quantity:accepted,userId,reason:`Recebimento pedido ${order.id}`,movementType:'PURCHASE_RECEIPT',locationId:input.locationId??null,lotId:input.lotId??null,serialId:input.serialId??null});movements.push(movement.id);await recordCost({productId:line.productId,supplierId:order.supplierId,warehouseId:order.warehouseId,quantity:accepted,unitCost:line.unitCost,previousQuantity:before,userId,sourceType:'PURCHASE_ORDER',sourceId:order.id,occurredAt:receivedAt});}
+          line.deliveredQuantity+=delivered;line.acceptedQuantity+=accepted;line.rejectedQuantity+=rejected;line.damagedQuantity+=damaged;line.pendingQuantity=Math.max(0,Number(line.quantity)-line.deliveredQuantity);
+          receiptItems.push({...line,receiptQuantity:delivered,acceptedQuantity:accepted,rejectedQuantity:rejected,damagedQuantity:damaged,locationId:input.locationId??null,lotId:input.lotId??null,serialId:input.serialId??null});
         }
-        const saved = repository.saveReceipt({ id:receiptId, orderId:order.id, supplierId:order.supplierId, warehouseId:order.warehouseId, items:order.items.map((item)=>({...item})), movementIds:movements, receivedBy:userId, receivedAt });
-        repository.savePurchaseOrder({ ...order, status:'RECEIVED', receivedAt, receivedBy:userId, receiptId });
-        const request = repository.getPurchaseRequest(order.requestId);
-        if (request) repository.savePurchaseRequest({ ...request, status:'RECEIVED' });
+        const complete=currentItems.every(x=>x.pendingQuantity===0);const status=complete?'RECEIVED':'PARTIALLY_RECEIVED';
+        const saved=repository.saveReceipt({id:receiptId,orderId:order.id,supplierId:order.supplierId,warehouseId:order.warehouseId,items:receiptItems,movementIds:movements,receivedBy:userId,receivedAt,status});
+        repository.savePurchaseOrder({...order,items:currentItems,status,receivedAt:complete?receivedAt:null,receivedBy:complete?userId:null,lastReceiptAt:receivedAt,lastReceiptId:receiptId});
+        const request=repository.getPurchaseRequest(order.requestId);if(request)repository.savePurchaseRequest({...request,status});
         return saved;
       });
-      return receipt;
     }
   };
 }
