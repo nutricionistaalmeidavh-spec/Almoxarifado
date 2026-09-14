@@ -1,5 +1,6 @@
 import './wms.js';
 import('/p1.js');
+import('/p2.js');
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
