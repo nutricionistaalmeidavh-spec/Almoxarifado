@@ -1,0 +1,13 @@
+import { randomUUID } from 'node:crypto';
+import { DomainError, requireId, requirePositiveNumber } from '../shared/domain-error.mjs';
+
+export function createKitService({repository,stock,now=()=>new Date().toISOString(),idFactory=randomUUID}={}){
+  if(!repository||!stock)throw new TypeError('repository and stock are required');
+  const get=(id)=>{const item=repository.getKit(requireId(id,'kitId'));if(!item||item.active===false)throw new DomainError('KIT_NOT_FOUND','kit not found',{id});return item;};
+  return{
+    list(){return repository.listKits().filter(x=>x.active!==false);},
+    saveKit(input={}){const code=String(input.code??'').trim().toUpperCase(),name=String(input.name??'').trim();if(!code||!name)throw new DomainError('INVALID_KIT','kit code and name are required');if(!Array.isArray(input.components)||!input.components.length)throw new DomainError('INVALID_KIT','kit requires components');const components=input.components.map(row=>{const productId=requireId(row.productId,'productId');if(!repository.getProduct(productId))throw new DomainError('PRODUCT_NOT_FOUND','kit product not found',{productId});return{productId,quantity:requirePositiveNumber(Number(row.quantity))};});if(new Set(components.map(x=>x.productId)).size!==components.length)throw new DomainError('INVALID_KIT','kit cannot repeat product components');const duplicate=repository.listKits().find(x=>x.code===code&&x.id!==input.id&&x.active!==false);if(duplicate)throw new DomainError('KIT_CODE_EXISTS','kit code already exists',{code});const current=input.id?repository.getKit(input.id):null;return repository.saveKit({...current,...input,id:input.id??idFactory(),code,name,components,active:input.active!==false,updatedAt:now()});},
+    availability({kitId,warehouseId}={}){const kit=get(kitId);requireId(warehouseId,'warehouseId');if(!repository.getWarehouse(warehouseId))throw new DomainError('WAREHOUSE_NOT_FOUND','warehouse not found',{warehouseId});return Math.max(0,Math.floor(Math.min(...kit.components.map(row=>repository.getBalance(row.productId,warehouseId)/Number(row.quantity)))));},
+    async issue({kitId,warehouseId,quantity,userId,reason='Baixa de kit'}={}){const kit=get(kitId);const qty=requirePositiveNumber(Number(quantity));const available=this.availability({kitId,warehouseId});if(available<qty)throw new DomainError('INSUFFICIENT_KIT_STOCK','insufficient components for kit',{kitId,warehouseId,available,requested:qty});return repository.transaction(async()=>{const movements=[];for(const row of kit.components)movements.push(await stock.exit({productId:row.productId,warehouseId,quantity:Number(row.quantity)*qty,userId,reason:`${reason}: ${kit.code}`,movementType:'KIT_ISSUE'}));return{kitId,warehouseId,quantity:qty,movements};});}
+  };
+}
