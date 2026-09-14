@@ -3,7 +3,7 @@ import { DomainError, requireId } from '../shared/domain-error.mjs';
 
 const TYPES=new Set(['MAINTENANCE','CALIBRATION']);
 function addDays(value,days){const date=new Date(value);date.setUTCDate(date.getUTCDate()+Number(days));return date.toISOString();}
-function statusFor(plan,now){if(plan.active===false)return'INACTIVE';const due=Date.parse(plan.nextDueAt??'');if(!Number.isFinite(due))return'UNSCHEDULED';const current=now.getTime(),soon=current+30*86400000;if(due<current)return'OVERDUE';if(due<=soon)return'DUE_SOON';return'OK';}
+function statusFor(plan,now){if(plan.active===false)return'INACTIVE';const due=Date.parse(plan.nextDueAt??'');if(!Number.isFinite(due))return'UNSCHEDULED';const current=now.getTime(),soon=current+30*86400000;if(due<=current)return'OVERDUE';if(due<=soon)return'DUE_SOON';return'OK';}
 
 export function createMaintenanceService({repository,now=()=>new Date().toISOString(),idFactory=randomUUID}={}){
   if(!repository)throw new TypeError('repository is required');
