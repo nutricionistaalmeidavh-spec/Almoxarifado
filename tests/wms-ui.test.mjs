@@ -15,3 +15,9 @@ test('WMS client calls local addressing receiving scan mobile and cycle endpoint
   const js=await read('apps/web/wms.js');
   for(const route of['/api/wms/locations','/api/wms/scan','/api/wms/pick','/api/wms/mobile','/api/wms/cycle-counts','/api/purchases/orders/'])assert.match(js,new RegExp(route.replaceAll('/','\\/')));
 });
+
+test('service worker caches WMS module and styles for local PWA use',async()=>{
+  const sw=await read('apps/web/sw.js');
+  assert.match(sw,/wms\.js/);
+  assert.match(sw,/wms\.css/);
+});
