@@ -3,7 +3,7 @@ import { validateUploadBatch } from '@artisys/upload';
 import { DomainError, requireId } from '../shared/domain-error.mjs';
 
 const ACCEPT=['application/pdf','image/jpeg','image/png','image/webp','text/plain'];
-const ENTITY_GETTERS={product:'getProduct',movement:null,purchaseRequest:'getPurchaseRequest',purchaseOrder:'getPurchaseOrder',receipt:'getReceipt',supplier:'getSupplier'};
+const ENTITY_GETTERS={product:'getProduct',movement:null,purchaseRequest:'getPurchaseRequest',purchaseOrder:'getPurchaseOrder',receipt:'getReceipt',supplier:'getSupplier',asset:'getAsset'};
 function nonEmpty(value,field){const text=String(value??'').trim();if(!text)throw new DomainError('INVALID_DOCUMENT',`${field} is required`,{field});return text;}
 function ensureUser(repository,userId){const user=repository.getUser?.(requireId(userId,'userId'));if(!user||user.active===false)throw new DomainError('USER_NOT_FOUND','user not found',{id:userId});return user;}
 function ensureEntity(repository,entityType,entityId){

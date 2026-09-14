@@ -1,4 +1,5 @@
 import './wms.js';
+import('/p1.js');
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -15,6 +16,7 @@ function installLoteATheme() {
 const movementLabels = {
   ENTRY: { label: 'Entrada', className: 'badge-success' },
   PURCHASE_RECEIPT: { label: 'Recebimento', className: 'badge-success' },
+  QUALITY_RELEASE: { label: 'Liberação qualidade', className: 'badge-success' },
   EXIT: { label: 'Saída', className: 'badge-danger' },
   ADJUSTMENT: { label: 'Ajuste', className: 'badge-warning' },
   CYCLE_ADJUSTMENT: { label: 'Ajuste cíclico', className: 'badge-warning' },
@@ -32,7 +34,11 @@ const statusLabels = {
   OPEN: { label: 'Aberto', className: 'badge-info' },
   CLOSED: { label: 'Fechado', className: 'badge-neutral' },
   ACTIVE: { label: 'Ativo', className: 'badge-success' },
+  AVAILABLE: { label: 'Disponível', className: 'badge-success' },
+  CHECKED_OUT: { label: 'Emprestado', className: 'badge-info' },
+  MAINTENANCE: { label: 'Manutenção', className: 'badge-warning' },
   RELEASED: { label: 'Liberado', className: 'badge-neutral' },
+  REJECTED: { label: 'Rejeitado', className: 'badge-danger' },
   CONSUMED: { label: 'Consumido', className: 'badge-neutral' },
   IN_TRANSIT: { label: 'Em trânsito', className: 'badge-info' },
   ORDERED: { label: 'Pedido', className: 'badge-info' },

@@ -108,6 +108,49 @@ Cada produto pode usar estratégia `MANUAL`, `FIFO` ou `FEFO`. O WMS gera plano 
 ### 30 — WMS / Coletor na PWA
 A PWA existente ganhou a área **WMS / Coletor** com endereçamento, leitura de código, recebimento parcial, sugestão FIFO/FEFO, receber, guardar/mover, retirar, devolver e contagem cíclica. O fluxo funciona na LAN e não exige serviço externo.
 
+## P1 — Diferencial comercial
+
+A área **P1 Comercial** amplia o almoxarifado sem transformar o produto em um ERP e mantém o núcleo local-first.
+
+### Patrimônio e ferramentas
+- Cadastro por tag/QR, série, categoria, condição e custo.
+- Retirada e devolução vinculadas a responsável e obra/projeto.
+- Previsão de devolução, perda, manutenção e histórico auditável.
+- Fotos, notas e documentos podem ser vinculados diretamente ao patrimônio.
+
+### Produto × fornecedor
+- Relação N:N entre produto e fornecedores.
+- SKU do fornecedor, embalagem, preço, histórico de preço, lead time e MOQ.
+- Um fornecedor preferencial por produto.
+- O lead time pode gerar automaticamente a previsão de entrega do pedido de compra.
+
+### Unidades e embalagens
+- Conversões como `1 CX = 12 UN` sem alterar a unidade base do produto.
+- Código de barras próprio por unidade/embalagem.
+- Normalização para a quantidade base antes da movimentação.
+
+### Qualidade e quarentena
+- Quantidades em inspeção ficam fora do estoque disponível.
+- Liberação parcial ou total gera entrada auditável no estoque.
+- Rejeição fecha a quantidade inspecionada sem incorporá-la ao saldo.
+
+### Reposição avançada
+- Consumo médio diário a partir das movimentações locais.
+- Lead time do fornecedor preferencial.
+- Estoque de segurança e ponto de reposição.
+- Cobertura estimada em dias.
+- Sugestão de compra respeitando MOQ e fornecedor preferencial.
+
+### Central de alertas
+- Estoque baixo/ruptura.
+- Lotes próximos da validade.
+- Pedidos de compra atrasados.
+- Ferramentas com devolução vencida.
+- Inventários cíclicos vencidos.
+- Falhas do backup automático.
+
+Todos esses recursos funcionam com a base SQLite local e a API/PWA na LAN. E-mail, WhatsApp ou outros serviços externos continuam opcionais e não fazem parte da dependência obrigatória do core.
+
 ## Desenvolvimento
 
 A fonte histórica de módulos reutilizáveis permanece pinada em `vendor/utilidades`. Para que o build final do repositório privado seja reproduzível sem credencial para um segundo repositório privado, os módulos efetivamente necessários ao runtime de distribuição também possuem snapshots mínimos pinados em `vendor/release-modules/`.
@@ -149,7 +192,7 @@ npm run security
 npm run release:check
 ```
 
-O workflow `.github/workflows/release-final.yml` continua reservado para o fechamento de release Windows. O P0 pode ser validado localmente sem consumir GitHub Actions.
+O workflow `.github/workflows/release-final.yml` continua reservado para o fechamento de release Windows. P0 e P1 podem ser validados localmente sem consumir GitHub Actions.
 
 ## Manual
 

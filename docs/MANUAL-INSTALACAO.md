@@ -1,4 +1,4 @@
-# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + P0 WMS
+# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + WMS + P1 Comercial
 
 ## Requisitos
 
@@ -10,7 +10,7 @@
 
 ## Instalação
 
-1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore o P0.
+1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore WMS/P1.
 2. Confirme a instalação para o usuário atual.
 3. Ao concluir, abra **ArtiSys Almoxarifado** pelo atalho da Área de Trabalho ou Menu Iniciar.
 4. O aplicativo inicia o servidor local e abre a interface do almoxarifado.
@@ -39,7 +39,7 @@ O PC principal precisa permanecer ligado enquanto outros dispositivos usam o sis
 
 ## Dados e migração para SQLite
 
-A base principal do P0 é local e usa SQLite:
+A base principal é local e usa SQLite:
 
 ```text
 .data/
@@ -62,15 +62,12 @@ Em uma instalação anterior que ainda possui `almoxarifado.json`, quando o banc
 
 Não apague o JSON original nem o `.migrated.bak` antes de conferir a primeira abertura e manter o backup operacional desejado.
 
-Base, documentos, configurações, logs e backups continuam no diretório de dados do usuário do Windows, separado da pasta de instalação do programa. Isso permite trocar os binários do aplicativo sem sobrescrever os dados operacionais.
-
 ## WMS / Coletor
 
 A PWA possui a seção **WMS / Coletor**. Ela funciona no PC, celular ou tablet conectado à mesma rede local.
 
 ### Endereçamento
-
-Cadastre a estrutura física do depósito usando os tipos disponíveis: zona, corredor, estante, nível, posição, recebimento e staging. O código do endereço deve ser único dentro do depósito.
+Cadastre zona, corredor, estante, nível, posição, recebimento e staging. O código do endereço deve ser único dentro do depósito.
 
 Exemplo:
 
@@ -79,47 +76,114 @@ ALM-01 / Z-A / C-03 / E-02 / N-04 / P-01
 ```
 
 ### Leitura e movimentação
-
-O fluxo móvel recomendado é:
-
-```text
-Endereço -> produto -> quantidade -> ação -> confirmar
-```
-
-As operações disponíveis incluem receber, guardar/mover, retirar e devolver. A movimentação fica registrada localmente e mantém a posição física vinculada ao saldo consolidado do depósito.
+O fluxo móvel recomendado é `Endereço -> produto -> quantidade -> ação -> confirmar`. As operações incluem receber, guardar/mover, retirar e devolver.
 
 ### FIFO e FEFO
-
-No cadastro do produto, escolha:
-
-- `MANUAL` — operador escolhe a posição;
-- `FIFO` — prioriza o item recebido há mais tempo;
+- `MANUAL` — operador escolhe a posição.
+- `FIFO` — prioriza o item recebido há mais tempo.
 - `FEFO` — prioriza o lote com validade mais próxima.
 
-A opção **Sugerir retirada** gera o plano de separação. A recomendação não baixa o estoque automaticamente; a confirmação operacional continua obrigatória.
+A sugestão de retirada não baixa o estoque sozinha; a confirmação operacional continua obrigatória.
 
 ## Recebimento parcial
 
-Em **WMS / Coletor > Recebimento parcial**, selecione o pedido, produto e informe a quantidade entregue. Opcionalmente discrimine:
-
-- quantidade aceita;
-- quantidade rejeitada;
-- quantidade avariada;
-- endereço de destino.
-
-A soma de aceita + rejeitada + avariada deve ser igual ao total entregue. Apenas a quantidade aceita entra no estoque. Se ainda houver saldo a entregar, o pedido permanece como **recebido parcialmente** até a conclusão.
+Em **WMS / Coletor > Recebimento parcial**, informe a quantidade entregue e, quando necessário, separe aceita, rejeitada e avariada. Apenas a quantidade aceita entra no estoque. Se ainda houver saldo, o pedido permanece `PARTIALLY_RECEIVED`.
 
 ## Inventário cíclico
 
-O inventário global tradicional continua disponível. Para contagens operacionais menores, use **WMS / Coletor > Inventário cíclico**.
+A primeira contagem é cega. Quando a recontagem estiver ativa, divergências exigem segunda contagem. Ao fechar a sessão, diferenças confirmadas geram ajuste auditável.
 
-A primeira contagem é cega: o operador não recebe o saldo esperado. Quando a opção de recontagem estiver ativa, uma divergência exige segunda contagem. Ao fechar a sessão, diferenças confirmadas geram ajuste auditável na posição correspondente.
+# P1 Comercial
+
+A seção **P1 Comercial** concentra os diferenciais adicionais de operação e controle.
+
+## Patrimônio e ferramentas
+
+Cadastre ferramentas/equipamentos por tag ou QR, nome, série e categoria. Um ativo pode estar:
+
+- disponível;
+- emprestado/retirado;
+- em manutenção;
+- perdido/inativo.
+
+Na retirada, registre o responsável, a obra/projeto e a previsão de devolução. Na devolução, registre a condição de retorno. O sistema impede uma segunda retirada enquanto houver uma retirada aberta e também bloqueia retirada durante manutenção.
+
+### Fotos e documentos do patrimônio
+
+Dentro de **P1 Comercial > Patrimônio**, use **Foto / documento do patrimônio** para anexar foto, PDF, nota fiscal, comprovante ou outro arquivo. O documento fica armazenado localmente e vinculado ao ativo.
+
+## Fornecedores por produto
+
+Um produto pode ter vários fornecedores. Para cada vínculo, registre:
+
+- SKU usado pelo fornecedor;
+- embalagem;
+- preço atual e histórico;
+- lead time em dias;
+- MOQ — quantidade mínima de compra;
+- indicação de fornecedor preferencial.
+
+Somente um vínculo fica como preferencial por produto. Quando houver lead time cadastrado, novos pedidos podem receber previsão de entrega automaticamente.
+
+## Unidades e embalagens
+
+A unidade original do produto continua sendo a unidade base. Cadastre conversões adicionais, por exemplo:
+
+```text
+1 CX = 12 UN
+1 FD = 6 CX = 72 UN
+```
+
+Cada conversão pode possuir seu próprio código de barras. A API de conversão retorna a quantidade equivalente na unidade base.
+
+## Qualidade e quarentena
+
+Use **Qualidade / quarentena** para registrar material que ainda não deve ficar disponível para consumo.
+
+Fluxo:
+
+```text
+Receber para inspeção -> manter em quarentena -> liberar ou rejeitar
+```
+
+Enquanto estiver em quarentena, a quantidade não entra no saldo disponível. A liberação gera uma entrada de estoque auditável. A rejeição encerra a quantidade correspondente sem incorporá-la ao estoque.
+
+A quarentena é um fluxo opcional. O recebimento tradicional continua disponível para materiais que não exigem inspeção.
+
+## Reposição avançada
+
+A tela calcula sugestões usando:
+
+- consumo médio diário no período selecionado;
+- estoque físico e reservas;
+- lead time do fornecedor preferencial;
+- dias de segurança;
+- estoque de segurança;
+- ponto de reposição;
+- cobertura estimada em dias;
+- MOQ;
+- fornecedor preferencial e custo estimado.
+
+Esses cálculos são locais e estatísticos; não dependem de serviço de IA ou API externa.
+
+## Central de alertas
+
+A central reúne automaticamente:
+
+- estoque abaixo do mínimo ou ruptura;
+- lote próximo da validade;
+- pedido de compra atrasado;
+- ferramenta com devolução vencida;
+- inventário cíclico vencido;
+- falha de backup automático.
+
+Os alertas são calculados/persistidos localmente. E-mail, WhatsApp ou notificações externas podem ser integrados futuramente, mas não são dependência obrigatória.
 
 ## Backup e restauração
 
-Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup completo inclui base e anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
+Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
 
-Mantenha cópias periódicas da pasta de backups em mídia/local seguro conforme a política da empresa.
+Falhas no backup automático também passam a gerar alerta crítico local.
 
 ## Atualização
 
@@ -130,8 +194,6 @@ A migração de JSON para SQLite ocorre automaticamente apenas quando aplicável
 ## Desinstalação
 
 A desinstalação padrão remove o aplicativo instalado, mas **não remove os dados do usuário** automaticamente. Isso evita perder estoque, documentos e backups por uma desinstalação acidental.
-
-A exclusão definitiva dos dados, quando desejada, deve ser feita separadamente pelo responsável depois de conferir os backups necessários.
 
 ## Leitor, câmera, impressora e balança
 
