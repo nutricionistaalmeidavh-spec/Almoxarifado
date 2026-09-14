@@ -46,3 +46,19 @@ test('fresh sqlite database preserves default local admin and main warehouse',()
   repo.close();
   rmSync(dir,{recursive:true,force:true});
 });
+
+test('replaceState persists imported backup state after reopening SQLite',()=>{
+  const dir=mkdtempSync(path.join(os.tmpdir(),'almox-restore-'));
+  const dbPath=path.join(dir,'almoxarifado.sqlite');
+  let repo=createSqliteStockRepository({dbPath});
+  const state=repo.exportState();
+  state.products=[{id:'restored',sku:'REST',name:'Restaurado',unit:'un',active:true}];
+  state.balances=[{productId:'restored',warehouseId:'main',quantity:9}];
+  repo.replaceState(state);
+  repo.close();
+  repo=createSqliteStockRepository({dbPath});
+  assert.equal(repo.getProduct('restored').name,'Restaurado');
+  assert.equal(repo.getBalance('restored','main'),9);
+  repo.close();
+  rmSync(dir,{recursive:true,force:true});
+});
