@@ -4,6 +4,7 @@ import { createDocumentService } from '../domain/documents/document-service.mjs'
 import { createAnalyticsService } from '../domain/analytics/analytics-service.mjs';
 import { createHardwareSettingsService } from '../domain/hardware/hardware-settings-service.mjs';
 import { createDocumentStorage } from './document-storage.mjs';
+import { createP1ApiExtensions } from './p1-api-extensions.mjs';
 
 function sendJson(res,status,body){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(body));}
 function sendText(res,status,body,contentType='text/plain; charset=utf-8',headers={}){res.writeHead(status,{'Content-Type':contentType,'Cache-Control':'no-store',...headers});res.end(body);}
@@ -26,6 +27,7 @@ export function createLocalApiExtensions({repository,auth,documentDir=path.resol
   const documents=createDocumentService({repository,storage});
   const analytics=createAnalyticsService({repository});
   const hardwareSettings=createHardwareSettingsService({repository});
+  const p1=createP1ApiExtensions({repository,auth});
   const unavailableHardware={status:()=>({serial:'unavailable',printing:'unavailable'}),async listPorts(){throw new DomainError('HARDWARE_UNAVAILABLE','serial hardware is unavailable');},async readScale(){throw new DomainError('HARDWARE_UNAVAILABLE','scale hardware is unavailable');},async print(){throw new DomainError('HARDWARE_UNAVAILABLE','printing hardware is unavailable');}};
   const hardware=hardwareAdapter??unavailableHardware;
 
@@ -54,6 +56,7 @@ export function createLocalApiExtensions({repository,auth,documentDir=path.resol
     if(req.method==='POST'&&pathname==='/api/hardware/print'){auth.require(token,'hardware.use');const body=await readJson(req);return sendJson(res,200,{result:await hardware.print(body.job,body.settings??{})})||true;}
     if(req.method==='GET'&&pathname==='/api/hardware/settings'){auth.require(token,'hardware.use');return sendJson(res,200,{items:hardwareSettings.list()})||true;}
     if(req.method==='POST'&&pathname==='/api/hardware/settings'){const actor=auth.require(token,'hardware.configure');const body=await readJson(req);return sendJson(res,200,{item:hardwareSettings.save(body,actor.id)})||true;}
+    if(await p1(req,res,url,token))return true;
     return false;
   };
 }
