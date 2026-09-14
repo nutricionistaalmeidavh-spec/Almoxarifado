@@ -28,3 +28,9 @@ test('QA security release and Windows packaging gates are explicit and self-cont
   assert.match(pkg.scripts['build:win'],/electron-builder/);
   assert.match(pkg.scripts['smoke:release'],/release-smoke/);
 });
+
+test('domain entrypoint exports SQLite persistence and WMS service',async()=>{
+  const index=await read('src/domain/index.mjs');
+  assert.match(index,/createSqliteStockRepository/);
+  assert.match(index,/createWmsService/);
+});
