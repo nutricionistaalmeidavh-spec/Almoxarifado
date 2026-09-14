@@ -1,4 +1,4 @@
-# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + WMS + P1 Comercial
+# Manual de instalação — ArtiSys Almoxarifado 1.0.0 + WMS + P1 + P2
 
 ## Requisitos
 
@@ -10,7 +10,7 @@
 
 ## Instalação
 
-1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore WMS/P1.
+1. Execute `ArtiSys-Almoxarifado-Setup-1.0.0.exe` para a release de base ou o instalador posterior que incorpore WMS/P1/P2.
 2. Confirme a instalação para o usuário atual.
 3. Ao concluir, abra **ArtiSys Almoxarifado** pelo atalho da Área de Trabalho ou Menu Iniciar.
 4. O aplicativo inicia o servidor local e abre a interface do almoxarifado.
@@ -179,9 +179,88 @@ A central reúne automaticamente:
 
 Os alertas são calculados/persistidos localmente. E-mail, WhatsApp ou notificações externas podem ser integrados futuramente, mas não são dependência obrigatória.
 
+# P2 Gestão
+
+A seção **P2 Gestão** concentra recursos de governança comercial e automação administrativa.
+
+## Campos personalizados
+
+Em **P2 Gestão > Campos personalizados**:
+
+1. escolha a entidade: produto, fornecedor, patrimônio, obra, solicitação ou pedido;
+2. informe a chave e o nome do campo;
+3. escolha `TEXT`, `NUMBER`, `DATE`, `BOOLEAN` ou `SELECT`;
+4. para `SELECT`, informe as opções permitidas;
+5. marque como obrigatório quando necessário.
+
+Os valores são salvos separadamente do cadastro-base, permitindo personalizar clientes sem criar outra versão do sistema. O painel também permite informar o ID do registro e um objeto JSON com os valores personalizados.
+
+## Matriz de aprovação por valor
+
+Cadastre regras por faixa, papel e etapa. Exemplo:
+
+```text
+R$ 0 a R$ 1.999,99      -> ALMOXARIFE / etapa 1
+R$ 2.000 a R$ 9.999,99 -> GESTOR / etapa 1
+Acima de R$ 10.000      -> ADMIN / etapa 1
+```
+
+Para compras sujeitas à matriz:
+
+1. informe o ID da solicitação e o valor total;
+2. gere a instância de aprovação;
+3. cada papel necessário aprova sua etapa;
+4. somente após o status `APPROVED` o pedido poderá ser criado para aquele valor.
+
+Se nenhuma regra se aplicar, o fluxo tradicional de compras continua funcionando.
+
+## KPI de fornecedores
+
+O painel calcula automaticamente, usando dados locais:
+
+- quantidade de pedidos;
+- valor comprado;
+- prazo médio real;
+- percentual entregue no prazo;
+- taxa de aceitação;
+- rejeições e avarias;
+- variação de preço.
+
+O ranking não depende de API externa.
+
+## Manutenção / calibração
+
+Crie um plano escolhendo o patrimônio, tipo (`MAINTENANCE` ou `CALIBRATION`), intervalo em dias e próxima data. O sistema identifica itens próximos do prazo e vencidos. Ao concluir um plano, informe certificado/referência quando houver; a próxima data é recalculada automaticamente.
+
+## Kits / BOM
+
+Cadastre um kit com código, nome e componentes. Na interface, use uma linha por componente no formato:
+
+```text
+SKU;quantidade
+PARAFUSO-01;4
+BUCHA-02;4
+```
+
+Ao baixar um kit, escolha depósito e quantidade. O sistema confere todos os componentes antes da operação e baixa tudo de forma transacional com movimento `KIT_ISSUE`.
+
+## Importar XML NF-e
+
+Em **P2 Gestão > Importar XML NF-e**:
+
+1. selecione o arquivo `.xml`;
+2. selecione o depósito;
+3. use **Pré-visualizar** para conferir fornecedor, valor e itens;
+4. somente depois use **Importar e lançar estoque**;
+5. confirme a operação.
+
+O parser local extrai emitente/CNPJ, produtos, SKU, GTIN, unidade, quantidade, custo, NCM, CFOP, total e, quando existir no XML, lote e validade. O sistema tenta relacionar fornecedor por documento e produto por SKU/código de barras; cadastros ausentes podem ser criados automaticamente.
+
+A pré-visualização não altera estoque. A entrada física e o custo só são gravados após confirmação explícita. XML com `DOCTYPE` ou `ENTITY` é rejeitado por segurança.
+
 ## Backup e restauração
 
-Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
+Em **Configurações**, use **Criar backup** para gerar um snapshot local. O backup inclui a base, os registros P1/P2 e os anexos locais. Antes de restaurar ou importar, o sistema gera um backup de segurança quando aplicável.
 
 Falhas no backup automático também passam a gerar alerta crítico local.
 

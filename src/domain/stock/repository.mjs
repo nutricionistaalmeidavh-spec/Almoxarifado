@@ -1,6 +1,6 @@
 function clone(value) { return value == null ? value : structuredClone(value); }
 function balanceKey(productId, warehouseId) { return `${productId}::${warehouseId}`; }
-const MAP_COLLECTIONS = ['categories','suppliers','products','warehouses','users','costCenters','projects','departments','purchaseRequests','purchaseOrders','receipts','reservations','lots','serials','transitTransfers','inventories','documents','hardwareSettings','locations','stockPositions','cycleCounts','cycleCountLines','assets','assetCheckouts','assetMaintenance','productSuppliers','unitConversions','qualityHolds','alertEvents'];
+const MAP_COLLECTIONS = ['categories','suppliers','products','warehouses','users','costCenters','projects','departments','purchaseRequests','purchaseOrders','receipts','reservations','lots','serials','transitTransfers','inventories','documents','hardwareSettings','locations','stockPositions','cycleCounts','cycleCountLines','assets','assetCheckouts','assetMaintenance','productSuppliers','unitConversions','qualityHolds','alertEvents','customFieldDefinitions','customFieldValues','approvalRules','approvalInstances','maintenancePlans','calibrationRecords','kits','nfeImports'];
 
 export function createMemoryStockRepository(seed = {}) {
   const state = { balances: new Map(), movements: [], counts: new Map(), priceHistory: [] };
@@ -55,6 +55,14 @@ export function createMemoryStockRepository(seed = {}) {
     getUnitConversion: (id) => getMap('unitConversions', id), listUnitConversions: (productId = null) => listMap('unitConversions').filter((item) => !productId || item.productId === productId), saveUnitConversion: (item) => saveTo(state.unitConversions, item),
     getQualityHold: (id) => getMap('qualityHolds', id), listQualityHolds: () => listMap('qualityHolds'), saveQualityHold: (item) => saveTo(state.qualityHolds, item),
     getAlertEvent: (id) => getMap('alertEvents', id), listAlertEvents: () => listMap('alertEvents'), saveAlertEvent: (item) => saveTo(state.alertEvents, item),
+    getCustomFieldDefinition: (id) => getMap('customFieldDefinitions', id), listCustomFieldDefinitions: () => listMap('customFieldDefinitions'), saveCustomFieldDefinition: (item) => saveTo(state.customFieldDefinitions, item),
+    getCustomFieldValue: (id) => getMap('customFieldValues', id), listCustomFieldValues: () => listMap('customFieldValues'), saveCustomFieldValue: (item) => saveTo(state.customFieldValues, item),
+    getApprovalRule: (id) => getMap('approvalRules', id), listApprovalRules: () => listMap('approvalRules'), saveApprovalRule: (item) => saveTo(state.approvalRules, item),
+    getApprovalInstance: (id) => getMap('approvalInstances', id), listApprovalInstances: () => listMap('approvalInstances'), saveApprovalInstance: (item) => saveTo(state.approvalInstances, item),
+    getMaintenancePlan: (id) => getMap('maintenancePlans', id), listMaintenancePlans: () => listMap('maintenancePlans'), saveMaintenancePlan: (item) => saveTo(state.maintenancePlans, item),
+    getCalibrationRecord: (id) => getMap('calibrationRecords', id), listCalibrationRecords: () => listMap('calibrationRecords'), saveCalibrationRecord: (item) => saveTo(state.calibrationRecords, item),
+    getKit: (id) => getMap('kits', id), listKits: () => listMap('kits'), saveKit: (item) => saveTo(state.kits, item),
+    getNfeImport: (id) => getMap('nfeImports', id), listNfeImports: () => listMap('nfeImports'), saveNfeImport: (item) => saveTo(state.nfeImports, item),
     getBalance: (productId, warehouseId) => state.balances.get(balanceKey(productId, warehouseId)) ?? 0,
     setBalance(productId, warehouseId, quantity) { state.balances.set(balanceKey(productId, warehouseId), quantity); return quantity; },
     listBalances() { return [...state.balances.entries()].map(([key, quantity]) => { const [productId, warehouseId] = key.split('::'); return { productId, warehouseId, quantity }; }); },
