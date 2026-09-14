@@ -2,7 +2,7 @@
 
 Sistema local-first de almoxarifado. O PC Windows atua como host principal e serve a PWA/API para desktop, celular e tablet na mesma LAN. O núcleo não depende de cloud nem de serviço pago.
 
-**Release final:** `1.0.0` — Windows x64 — `ArtiSys-Almoxarifado-Setup-1.0.0.exe`.
+**Release final de base:** `1.0.0` — Windows x64 — `ArtiSys-Almoxarifado-Setup-1.0.0.exe`.
 
 O produto é distribuído **sem sistema de licença**, chave, ativação, limite por máquina, assinatura obrigatória ou servidor de licença.
 
@@ -74,6 +74,40 @@ Runtime central para base, API/PWA, documentos, backup, configurações, logs, h
 - Manual de instalação/primeiro acesso.
 - Pacote comercial **sem licença ou ativação** e sem demo bloqueada.
 
+### 25 — Persistência SQLite e migração
+- `node:sqlite` passa a ser a persistência primária local.
+- Banco principal: `.data/almoxarifado.sqlite`.
+- Instalações antigas com `.data/almoxarifado.json` são importadas automaticamente na primeira abertura do banco vazio.
+- O JSON anterior é preservado como `almoxarifado.json.migrated.bak`.
+- O bootstrap de instalação nova continua criando `ALM-01` e o administrador local.
+- Nenhuma dependência SaaS ou banco pago é exigida.
+
+### 26 — Endereçamento físico
+- Hierarquia por depósito: zona, corredor, estante, nível, posição, recebimento e staging.
+- Código de endereço único dentro do depósito.
+- Saldo rastreado por `produto + depósito + endereço + lote + série`, mantendo o saldo consolidado já existente por depósito.
+- Movimentações podem registrar `locationId` sem quebrar os fluxos legados.
+
+### 27 — Recebimento parcial
+- Pedido pode ficar `PARTIALLY_RECEIVED` até a entrega completa.
+- Controle por linha de quantidade entregue, aceita, rejeitada, avariada e pendente.
+- Apenas a quantidade aceita entra no estoque e atualiza custo.
+- O recebimento pode indicar endereço, lote e número de série.
+- A chamada antiga sem lista de itens continua recebendo todo o saldo pendente para manter compatibilidade.
+
+### 28 — FIFO / FEFO
+Cada produto pode usar estratégia `MANUAL`, `FIFO` ou `FEFO`. O WMS gera plano de retirada a partir das posições rastreadas; FEFO prioriza menor validade e FIFO prioriza o recebimento mais antigo. A recomendação não baixa estoque sozinha: a movimentação continua exigindo confirmação operacional.
+
+### 29 — Inventário cíclico
+- Contagem por depósito e, opcionalmente, por endereço/produto.
+- Primeira contagem é cega: o saldo esperado não é enviado ao fluxo operacional.
+- Divergência pode exigir segunda contagem.
+- Fechamento gera ajuste auditável por endereço, lote e série.
+- O inventário global legado continua disponível.
+
+### 30 — WMS / Coletor na PWA
+A PWA existente ganhou a área **WMS / Coletor** com endereçamento, leitura de código, recebimento parcial, sugestão FIFO/FEFO, receber, guardar/mover, retirar, devolver e contagem cíclica. O fluxo funciona na LAN e não exige serviço externo.
+
 ## Desenvolvimento
 
 A fonte histórica de módulos reutilizáveis permanece pinada em `vendor/utilidades`. Para que o build final do repositório privado seja reproduzível sem credencial para um segundo repositório privado, os módulos efetivamente necessários ao runtime de distribuição também possuem snapshots mínimos pinados em `vendor/release-modules/`.
@@ -95,14 +129,15 @@ No primeiro acesso local, defina a senha do administrador com pelo menos 10 cara
 
 ```text
 .data/
-├── almoxarifado.json
+├── almoxarifado.sqlite
+├── almoxarifado.json.migrated.bak   # somente após migração de uma instalação antiga
 ├── documents/
 ├── backups/
 ├── logs/
 └── settings.json
 ```
 
-No instalador, o equivalente fica no diretório de dados do usuário do Windows, separado dos binários do programa.
+Em uma instalação já existente, o arquivo `almoxarifado.json` é lido somente para a migração inicial quando o SQLite ainda está vazio. O backup de migração é preservado. No instalador, os dados ficam no diretório de dados do usuário do Windows, separado dos binários do programa.
 
 ## Verificação
 
@@ -114,10 +149,10 @@ npm run security
 npm run release:check
 ```
 
-O workflow `.github/workflows/release-final.yml` adiciona o gate Windows: build NSIS, instalação silenciosa, inicialização, `/api/health`, smoke funcional, reinstalação/persistência, hash e manifesto.
+O workflow `.github/workflows/release-final.yml` continua reservado para o fechamento de release Windows. O P0 pode ser validado localmente sem consumir GitHub Actions.
 
 ## Manual
 
 Consulte `docs/MANUAL-INSTALACAO.md`.
 
-> A validação automatizada da release comprova os fluxos de software cobertos pelo workflow. Homologação física de leitores, câmeras, impressoras, balanças e máquinas específicas de clientes não é alegada por esse gate.
+> A validação automatizada comprova os fluxos de software cobertos pelos testes. Homologação física de leitores, câmeras, impressoras, balanças e máquinas específicas de clientes não é alegada por esse gate.

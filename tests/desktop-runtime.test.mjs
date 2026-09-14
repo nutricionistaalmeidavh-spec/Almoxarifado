@@ -14,7 +14,8 @@ test('desktop runtime composes repository, API and local web server lifecycle', 
   assert.ok(address.port>0);
   const health=await fetch(`http://127.0.0.1:${address.port}/api/health`).then((r)=>r.json());
   assert.equal(health.status,'ok');
-  assert.match(runtime.paths.database,/almoxarifado\.json$/);
+  assert.match(runtime.paths.database,/almoxarifado\.sqlite$/);
+  assert.match(runtime.paths.legacyDatabase,/almoxarifado\.json$/);
   await runtime.stop();
   await runtime.stop();
 });

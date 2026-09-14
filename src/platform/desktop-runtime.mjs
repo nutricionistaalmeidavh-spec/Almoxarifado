@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createDesktopShellManifest } from '@artisys/desktop-shell';
-import { createFileStockRepository } from '../domain/stock/file-repository.mjs';
+import { createSqliteStockRepository } from '../domain/stock/sqlite-repository.mjs';
 import { createBackupService } from '../domain/backup/backup-service.mjs';
 import { createLocalApi } from './local-api.mjs';
 import { createWebServer } from './web-server.mjs';
@@ -18,7 +18,7 @@ function rotateLog(file,maxBytes=1024*1024){try{if(statSync(file).size<maxBytes)
 export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),host='0.0.0.0',port=4173,dependencies={}}={}){
   if(typeof dataDir!=='string'||!dataDir.trim())throw new TypeError('dataDir is required');
   const data=path.resolve(dataDir);
-  const paths={data,database:path.join(data,'almoxarifado.json'),documents:path.join(data,'documents'),backups:path.join(data,'backups'),logs:path.join(data,'logs'),settings:path.join(data,'settings.json')};
+  const paths={data,database:path.join(data,'almoxarifado.sqlite'),legacyDatabase:path.join(data,'almoxarifado.json'),documents:path.join(data,'documents'),backups:path.join(data,'backups'),logs:path.join(data,'logs'),settings:path.join(data,'settings.json')};
   for(const dir of [paths.data,paths.documents,paths.backups,paths.logs])mkdirSync(dir,{recursive:true});
   const defaults={host,port,backup:{enabled:true,intervalMs:86_400_000},hardware:{}};
   let currentSettings=normalizeSettings(readJson(paths.settings),defaults);
@@ -33,17 +33,18 @@ export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),
 
   async function start(){
     if(server){const current=address();return typeof current==='object'&&current?current:{address:current};}
-    repository=(dependencies.createRepository??createFileStockRepository)({filePath:paths.database});
+    const createRepository=dependencies.createRepository??createSqliteStockRepository;
+    repository=createRepository({dbPath:paths.database,filePath:paths.database,legacyJsonPath:paths.legacyDatabase});
     const backup=(dependencies.createBackupService??createBackupService)({repository,backupDir:paths.backups});
     if(currentSettings.backup.enabled!==false)stopAutomaticBackup=backup.startAutomatic({intervalMs:Number(currentSettings.backup.intervalMs??86_400_000)});
     const hardwareAdapter=dependencies.hardwareAdapter??await loadHardwareAdapter();
     const ocrAdapter=dependencies.ocrAdapter??createOcrAdapter({providers:dependencies.ocrProviders??{}});
     const api=(dependencies.createLocalApi??createLocalApi)({repository,backupDir:paths.backups,documentDir:paths.documents,ocrAdapter,hardwareAdapter});
     server=(dependencies.createWebServer??createWebServer)({host:currentSettings.host,port:currentSettings.port,apiHandler:api});
-    try{await server.start();const current=address();log('runtime.started',{host:current?.address??currentSettings.host,port:current?.port??currentSettings.port});return current;}
-    catch(error){stopAutomaticBackup?.();stopAutomaticBackup=null;server=null;log('runtime.start_failed',{code:error?.code??'ERROR',message:String(error?.message??error)});throw error;}
+    try{await server.start();const current=address();log('runtime.started',{host:current?.address??currentSettings.host,port:current?.port??currentSettings.port,database:'sqlite'});return current;}
+    catch(error){stopAutomaticBackup?.();stopAutomaticBackup=null;repository?.close?.();repository=null;server=null;log('runtime.start_failed',{code:error?.code??'ERROR',message:String(error?.message??error)});throw error;}
   }
-  async function stop(){if(!server)return;const current=server;server=null;stopAutomaticBackup?.();stopAutomaticBackup=null;await current.stop();log('runtime.stopped');}
+  async function stop(){if(!server){repository?.close?.();repository=null;return;}const current=server;server=null;stopAutomaticBackup?.();stopAutomaticBackup=null;await current.stop();repository?.close?.();repository=null;log('runtime.stopped');}
   function saveSettings(patch={}){currentSettings=normalizeSettings({...currentSettings,...patch,backup:{...currentSettings.backup,...(patch.backup??{})},hardware:{...currentSettings.hardware,...(patch.hardware??{})}},defaults);atomicJson(paths.settings,currentSettings);log('settings.saved');return{...currentSettings,restartRequired:Boolean(server)};}
 
   return{manifest,paths,get settings(){return structuredClone(currentSettings);},start,stop,address,saveSettings,get repository(){return repository;}};

@@ -1,5 +1,6 @@
 export { createMemoryStockRepository } from './stock/repository.mjs';
 export { createFileStockRepository } from './stock/file-repository.mjs';
+export { createSqliteStockRepository } from './stock/sqlite-repository.mjs';
 export { createStockService } from './stock/stock-service.mjs';
 export { createAdvancedStockService } from './stock/advanced-stock-service.mjs';
 export { createInventoryService } from './inventory/inventory-service.mjs';
@@ -9,6 +10,7 @@ export { createBackupService } from './backup/backup-service.mjs';
 export { createPurchasingService } from './purchasing/purchasing-service.mjs';
 export { createManagementService } from './management/management-service.mjs';
 export { createCostService } from './costs/cost-service.mjs';
+export { createWmsService } from './wms/wms-service.mjs';
 export { createDocumentService } from './documents/document-service.mjs';
 export { createAnalyticsService } from './analytics/analytics-service.mjs';
 export { createHardwareSettingsService } from './hardware/hardware-settings-service.mjs';
