@@ -1,5 +1,5 @@
 import './wms.js';
-import('./p1.js');
+import('/p1.js');
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -14,25 +14,10 @@ function installLoteATheme() {
 }
 
 const movementLabels = {
-  ENTRY: { label: 'Entrada', className: 'badge-success' },
-  PURCHASE_RECEIPT: { label: 'Recebimento', className: 'badge-success' },
-  QUALITY_RELEASE: { label: 'Liberação qualidade', className: 'badge-success' },
-  EXIT: { label: 'Saída', className: 'badge-danger' },
-  ADJUSTMENT: { label: 'Ajuste', className: 'badge-warning' },
-  CYCLE_ADJUSTMENT: { label: 'Ajuste cíclico', className: 'badge-warning' },
-  TRANSFER: { label: 'Transferência', className: 'badge-info' },
-  TRANSIT_OUT: { label: 'Saída em trânsito', className: 'badge-info' },
-  TRANSIT_IN: { label: 'Entrada em trânsito', className: 'badge-info' },
-  LOCATION_MOVE_OUT: { label: 'Mov. endereço - saída', className: 'badge-info' },
-  LOCATION_MOVE_IN: { label: 'Mov. endereço - entrada', className: 'badge-info' },
-  LOSS: { label: 'Perda', className: 'badge-danger' },
-  DAMAGE: { label: 'Avaria', className: 'badge-warning' },
-  RETURN: { label: 'Devolução', className: 'badge-success' }
+  ENTRY: { label: 'Entrada', className: 'badge-success' }, PURCHASE_RECEIPT: { label: 'Recebimento', className: 'badge-success' }, QUALITY_RELEASE: { label: 'Liberação qualidade', className: 'badge-success' }, EXIT: { label: 'Saída', className: 'badge-danger' }, ADJUSTMENT: { label: 'Ajuste', className: 'badge-warning' }, CYCLE_ADJUSTMENT: { label: 'Ajuste cíclico', className: 'badge-warning' }, TRANSFER: { label: 'Transferência', className: 'badge-info' }, TRANSIT_OUT: { label: 'Saída em trânsito', className: 'badge-info' }, TRANSIT_IN: { label: 'Entrada em trânsito', className: 'badge-info' }, LOCATION_MOVE_OUT: { label: 'Mov. endereço - saída', className: 'badge-info' }, LOCATION_MOVE_IN: { label: 'Mov. endereço - entrada', className: 'badge-info' }, LOSS: { label: 'Perda', className: 'badge-danger' }, DAMAGE: { label: 'Avaria', className: 'badge-warning' }, RETURN: { label: 'Devolução', className: 'badge-success' }
 };
-
 const statusLabels = {
-  OPEN: { label: 'Aberto', className: 'badge-info' }, CLOSED: { label: 'Fechado', className: 'badge-neutral' }, ACTIVE: { label: 'Ativo', className: 'badge-success' }, AVAILABLE: { label: 'Disponível', className: 'badge-success' }, CHECKED_OUT: { label: 'Emprestado', className: 'badge-info' }, MAINTENANCE: { label: 'Manutenção', className: 'badge-warning' },
-  RELEASED: { label: 'Liberado', className: 'badge-neutral' }, REJECTED: { label: 'Rejeitado', className: 'badge-danger' }, CONSUMED: { label: 'Consumido', className: 'badge-neutral' }, IN_TRANSIT: { label: 'Em trânsito', className: 'badge-info' }, ORDERED: { label: 'Pedido', className: 'badge-info' }, PARTIALLY_RECEIVED: { label: 'Recebido parcialmente', className: 'badge-warning' }, RECEIVED: { label: 'Recebido', className: 'badge-success' }, APPROVED: { label: 'Aprovado', className: 'badge-success' }, PENDING: { label: 'Pendente', className: 'badge-neutral' }, NEEDS_RECOUNT: { label: 'Recontagem', className: 'badge-warning' }, COUNTED: { label: 'Contado', className: 'badge-success' }, DRAFT: { label: 'Rascunho', className: 'badge-neutral' }, LOST: { label: 'Perdido', className: 'badge-danger' }, DAMAGED: { label: 'Avariado', className: 'badge-warning' }
+  OPEN:{label:'Aberto',className:'badge-info'},CLOSED:{label:'Fechado',className:'badge-neutral'},ACTIVE:{label:'Ativo',className:'badge-success'},AVAILABLE:{label:'Disponível',className:'badge-success'},CHECKED_OUT:{label:'Emprestado',className:'badge-info'},MAINTENANCE:{label:'Manutenção',className:'badge-warning'},RELEASED:{label:'Liberado',className:'badge-neutral'},REJECTED:{label:'Rejeitado',className:'badge-danger'},CONSUMED:{label:'Consumido',className:'badge-neutral'},IN_TRANSIT:{label:'Em trânsito',className:'badge-info'},ORDERED:{label:'Pedido',className:'badge-info'},PARTIALLY_RECEIVED:{label:'Recebido parcialmente',className:'badge-warning'},RECEIVED:{label:'Recebido',className:'badge-success'},APPROVED:{label:'Aprovado',className:'badge-success'},PENDING:{label:'Pendente',className:'badge-neutral'},NEEDS_RECOUNT:{label:'Recontagem',className:'badge-warning'},COUNTED:{label:'Contado',className:'badge-success'},DRAFT:{label:'Rascunho',className:'badge-neutral'},LOST:{label:'Perdido',className:'badge-danger'},DAMAGED:{label:'Avariado',className:'badge-warning'}
 };
 function badgeHtml(entry){return `<span class="badge ${entry.className}">${entry.label}</span>`;}
 function decorateDynamicContent(root=document){$$('.empty',root).forEach((element)=>element.classList.add('empty-state'));$$('td',root).forEach((cell)=>{if(cell.dataset.uiV2Decorated==='1'||cell.children.length)return;const value=cell.textContent.trim(),entry=movementLabels[value]||statusLabels[value];if(!entry)return;cell.innerHTML=badgeHtml(entry);cell.dataset.uiV2Decorated='1';});}
