@@ -11,9 +11,11 @@ O ArtiSys Almoxarifado continua local-first. Ao abrir uma instalação **empacot
 
 ## Publicar versões para os clientes
 
-**Importante:** o repositório atual `nutricionistaalmeidavh-spec/Almoxarifado` é privado. A API pública do GitHub retorna 404 para clientes sem autenticação. Portanto, **o fluxo de atualização não fica operacional nos computadores dos clientes até disponibilizar um feed HTTPS público com o instalador** (sem disponibilizar o repositório-fonte). Nunca embuta um token privado no aplicativo.
+**Canal padrão:** o repositório `nutricionistaalmeidavh-spec/Almoxarifado` está público desde 13/11/2026. O aplicativo consulta automaticamente `https://api.github.com/repos/nutricionistaalmeidavh-spec/Almoxarifado/releases/latest`. Não há necessidade de configurar um serviço externo ou token privado.
 
-Opção A: disponibilizar somente o instalador em uma GitHub Release de um **repositório público dedicado a binários** e configurar a URL da API `https://api.github.com/repos/ORGANIZACAO/REPOSITORIO-BINARIOS/releases/latest`. O release precisa ter um arquivo `ArtiSys-Almoxarifado-Setup-X.Y.Z.exe` e seu SHA-256 no campo `digest` ou o `release-manifest.json` gerado pela rotina existente.
+**Release v1.0.1:** o workflow `.github/workflows/release-final.yml` publica `v1.0.1` após gates Linux, instalação/reinstalação Windows e verificação de integridade. A release inclui `ArtiSys-Almoxarifado-Setup-1.0.1.exe`, `SHA256SUMS.txt` e `release-manifest.json`.
+
+**Opcional:** para usar um servidor HTTPS próprio ou outro repositório de binários, configure a fonte como explicado abaixo.
 
 Opção B: publicar um arquivo JSON estático em **servidor próprio ou hospedagem gratuita HTTPS**, com estes campos (valores fictícios abaixo; substitua pelos dados reais):
 
@@ -33,6 +35,6 @@ Aponte o aplicativo instalado para o catálogo criando `update-source.json` na p
 { "url": "https://seu-servidor.example/almoxarifado/latest.json" }
 ```
 
-Também é possível definir `ARTISYS_ALMOX_UPDATE_URL` no ambiente do processo antes de abrir o aplicativo; essa variável tem preferência sobre o arquivo local. Caso nenhuma fonte seja configurada, o aplicativo tenta a API do repositório original: ela permanecerá inacessível enquanto o repositório for privado.
+Também é possível definir `ARTISYS_ALMOX_UPDATE_URL` no ambiente do processo antes de abrir o aplicativo; essa variável tem preferência sobre o arquivo local. Caso nenhuma fonte seja configurada, o aplicativo utiliza automaticamente as releases públicas deste repositório.
 
-Ao lançar a próxima versão, **incremente `version` no `package.json`** e gere o instalador correspondente. Esta PR apenas adiciona o atualizador; não publica binários, nem muda a versão comercial existente, nem move dados do usuário.
+Ao lançar a próxima versão, **incremente `version` no `package.json`** e gere o instalador correspondente. O workflow de release gera e publica o instalador, condicionado à aprovação dos testes. A instalação substitui os binários, preservando o banco local.
