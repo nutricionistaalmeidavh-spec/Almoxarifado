@@ -30,3 +30,76 @@ $('#backups-table')?.addEventListener('click',async(event)=>{const button=event.
 async function configureRoleVisibility(){try{const me=await api('/api/auth/me');const admin=me.user?.role==='ADMIN';const backupPanel=$('#create-backup')?.closest('.panel'),userPanel=$('#user-form')?.closest('.panel');if(backupPanel)backupPanel.hidden=!admin;if(userPanel)userPanel.hidden=!admin;if($('#hardware-setting-form'))$('#hardware-setting-form').hidden=!admin;}catch{}}
 $('#network-origin').textContent=location.origin;
 document.querySelectorAll('.nav button').forEach((button)=>button.addEventListener('click',async()=>{try{if(button.dataset.view==='documentos'){await boot(true);await refreshDocumentEntity();await loadDocuments();}if(button.dataset.view==='relatorios'){await boot(true);await refreshAnalyticsFilters();}if(button.dataset.view==='configuracoes'){await configureRoleVisibility();await loadHardware();await loadExistingBackups();}}catch(error){flash(error.message,true);}}));
+
+
+// Local open-source extensions. No CDN, cloud service or paid dependency.
+const reportsToolbar=$('#download-stock')?.parentElement;
+async function downloadLocalReport(url,name){
+  const response=await fetch(url,{headers:{Authorization:'Bearer '+token()}});
+  if(!response.ok){const details=await response.json().catch(()=>({}));throw Error(details.message||'Exportação indisponível');}
+  const link=document.createElement('a'),blob=await response.blob();
+  link.href=URL.createObjectURL(blob);link.download=name;link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+if(reportsToolbar){
+  for(const [label,url,name] of [
+    ['Estoque PDF','/api/reports/stock.pdf','estoque.pdf'],
+    ['Estoque Excel','/api/reports/stock.xlsx','estoque.xlsx'],
+    ['Etiquetas Code 128','/api/reports/labels.pdf','etiquetas.pdf'],
+    ['Etiquetas QR','/api/reports/labels.pdf?format=qr','etiquetas-qr.pdf']]){
+    const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent=label;
+    button.addEventListener('click',()=>downloadLocalReport(url,name).catch(e=>flash(e.message,true)));
+    reportsToolbar.append(button);
+  }
+}
+const productCatalog=$('#view-cadastros');
+if(productCatalog){
+  const panel=document.createElement('div');panel.className='panel';
+  panel.innerHTML='<h2>Importar produtos de CSV</h2><p class="muted">Colunas: SKU, Produto, Unidade, Código de barras, Estoque mínimo, Custo unitário. Nada será gravado antes da conferência.</p><div class="toolbar"><input id="csv-products-file" type="file" accept=".csv,text/csv"><button type="button" id="csv-products-preview" class="btn secondary">Validar CSV</button><button type="button" id="csv-products-commit" class="btn" disabled>Confirmar importação</button></div><div id="csv-products-results" class="top-gap" role="status"></div>';
+  productCatalog.append(panel);
+  let csvContent='',validated=false;
+  $('#csv-products-file').addEventListener('change',async e=>{
+    csvContent=e.target.files?.[0]?await e.target.files[0].text():'';
+    validated=false;$('#csv-products-commit').disabled=true;
+    $('#csv-products-results').textContent=csvContent?'Arquivo selecionado. Clique em Validar CSV.':'Nenhum arquivo selecionado.';
+  });
+  $('#csv-products-preview').addEventListener('click',async()=>{
+    try{
+      const preview=await api('/api/import/products/preview',{method:'POST',body:JSON.stringify({csv:csvContent})});
+      validated=preview.valid;$('#csv-products-commit').disabled=!validated;
+      $('#csv-products-results').textContent=preview.valid
+        ?preview.count+' produtos válidos. Prévia: '+preview.items.slice(0,5).map(x=>x.sku+' — '+x.name).join('; ')
+        :'Ajuste os erros antes de importar: '+preview.errors.slice(0,10).map(e=>'linha '+e.row+': '+e.message).join('; ');
+    }catch(e){validated=false;$('#csv-products-commit').disabled=true;flash(e.message,true);}
+  });
+  $('#csv-products-commit').addEventListener('click',async()=>{
+    if(!validated)return;
+    const button=$('#csv-products-commit');button.disabled=true;button.textContent='Importando…';
+    try{
+      const result=await api('/api/import/products/commit',{method:'POST',body:JSON.stringify({csv:csvContent})});
+      $('#csv-products-results').textContent=result.count+' produtos importados com sucesso.';
+      csvContent='';validated=false;$('#csv-products-file').value='';
+      window.dispatchEvent(new Event('almox-data-imported'));
+    }catch(e){$('#csv-products-results').textContent='Falha: '+e.message;}
+    finally{button.textContent='Confirmar importação';button.disabled=true;}
+  });
+}
+const reportsView=$('#view-relatorios');
+if(reportsView){
+  const panel=document.createElement('div');panel.className='panel';
+  panel.innerHTML='<h2>Consumo por produto</h2><p class="muted">Curva ABC calculada localmente sobre as movimentações registradas.</p><button type="button" id="analytics-chart-load" class="btn secondary">Gerar gráfico</button><div id="analytics-chart" style="height:340px;max-width:100%" role="img" aria-label="Gráfico de valor consumido por produto"></div><div id="analytics-chart-description" class="muted" aria-live="polite"></div>';
+  reportsView.append(panel);
+  $('#analytics-chart-load').addEventListener('click',async()=>{
+    try{
+      const {items}=await api('/api/analytics/abc?'+analyticsParams().toString());
+      const rows=(items||[]).slice(0,15);
+      if(!window.echarts)throw Error('Biblioteca de gráficos não está empacotada no instalador.');
+      const root=$('#analytics-chart'),chart=window.echarts.getInstanceByDom(root)||window.echarts.init(root);
+      chart.setOption({tooltip:{trigger:'axis'},grid:{left:70,right:30,bottom:80,top:25},
+        xAxis:{type:'category',data:rows.map(x=>x.product),axisLabel:{interval:0,rotate:45,overflow:'truncate',width:100}},
+        yAxis:{type:'value',name:'R$ consumido'},
+        series:[{name:'Consumo',type:'bar',data:rows.map(x=>Number(x.value||0))}]},true);
+      $('#analytics-chart-description').textContent=rows.length+' produtos apresentados. Valores baseados nos lançamentos existentes.';
+    }catch(e){$('#analytics-chart-description').textContent='Falha ao gerar gráfico: '+e.message;}
+  });
+}
