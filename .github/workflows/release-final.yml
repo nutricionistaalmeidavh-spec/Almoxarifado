@@ -1,4 +1,4 @@
-name: Final Release 1.0.0
+name: Final Release 1.0.1
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
-  RELEASE_ARTIFACT: dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe
+  RELEASE_ARTIFACT: dist/ArtiSys-Almoxarifado-Setup-1.0.1.exe
 
 jobs:
   linux-gates:
@@ -63,6 +63,8 @@ jobs:
   windows-release:
     name: Windows — build, install and usability smoke
     needs: linux-gates
+    permissions:
+      contents: write
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -143,13 +145,23 @@ jobs:
           RELEASE_ARTIFACT_REQUIRED: '1'
         run: npm run release:check
 
+      - name: Publish verified release v1.0.1 on GitHub
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v1.0.1 "$env:RELEASE_ARTIFACT" "dist/SHA256SUMS.txt" "dist/release-manifest.json" --target "$env:GITHUB_SHA" --title "ArtiSys Almoxarifado v1.0.1" --notes "Verificação de atualizações ao abrir o aplicativo Windows, com download validado por SHA-256 e instalação mediante confirmação. Mantém dados locais." --draft
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a release" }
+          gh release edit v1.0.1 --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar a release validada" }
+
       - name: Upload approved release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: artisys-almoxarifado-1.0.0
+          name: artisys-almoxarifado-1.0.1
           if-no-files-found: error
           retention-days: 30
           path: |
-            dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe
+            dist/ArtiSys-Almoxarifado-Setup-1.0.1.exe
             dist/SHA256SUMS.txt
             dist/release-manifest.json
