@@ -1,5 +1,6 @@
-ArtiSys Almoxarifado 1.0.0 — UI v2 final release validation trigger
-ui-v2: deliveries 1-10 integrated
-visual-qa: capture 8 real installed-app screenshots
-visual-fix: inactive views hidden; exactly one application view visible
-release: rebuild, reinstall smoke, hash and approved artifact
+ArtiSys Almoxarifado 1.0.1 — final release validation trigger
+source: main após merge da PR release/v1.0.1-20261113
+checks: Node test/syntax, segurança, QA, Windows build e instalação/reinstalação
+publish: somente após smoke de Windows e SHA-256/manifest aprovados
+artifacts: ArtiSys-Almoxarifado-Setup-1.0.1.exe, SHA256SUMS.txt, release-manifest.json
+channel: GitHub Releases /releases/latest
