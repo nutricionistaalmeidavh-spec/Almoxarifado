@@ -17,3 +17,12 @@ test('package exposes desktop runtime command with pinned Electron', async () =>
   assert.match(pkg.scripts.desktop,/electron-main\.mjs/);
   assert.equal(pkg.devDependencies.electron,'43.4.1');
 });
+
+test('installed Windows desktop checks updates only after the window is ready',async()=>{
+  const source=await read('apps/desktop/src/electron-main.mjs');
+  assert.match(source,/app\.isPackaged/);
+  assert.match(source,/ready-to-show/);
+  assert.match(source,/promptForDesktopUpdate/);
+  assert.match(source,/readUpdateFeedUrl/);
+  assert.match(source,/app\.getVersion\(\)/);
+});
