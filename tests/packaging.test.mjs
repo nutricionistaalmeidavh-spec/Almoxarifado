@@ -4,9 +4,9 @@ import { readFile } from 'node:fs/promises';
 
 const read=(p)=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 
-test('release 1.0.0 is packaged as NSIS x64 without deleting app data', async()=>{
+test('release 1.0.1 is packaged as NSIS x64 without deleting app data', async()=>{
   const pkg=JSON.parse(await read('package.json'));
-  assert.equal(pkg.version,'1.0.0');
+  assert.equal(pkg.version,'1.0.1');
   assert.equal(pkg.devDependencies['electron-builder'],'26.15.3');
   assert.equal(pkg.devDependencies.playwright,'1.62.1');
   assert.match(pkg.scripts['build:win'],/electron-builder/);
