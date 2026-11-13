@@ -27,6 +27,6 @@ test('final release workflow publishes real UI v2 screenshots as a QA artifact',
 
 test('one-time release trigger documents its purpose',async()=>{
   const trigger=await read('.release-trigger');
-  assert.match(trigger,/1\.0\.0/);
+  assert.match(trigger,/1\.0\.1/);
   assert.match(trigger,/final release/i);
 });
