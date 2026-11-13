@@ -5,9 +5,9 @@ import { sha256File } from './release-manifest.mjs';
 const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
 const version=process.env.npm_package_version||pkg.version;
 const required=process.env.RELEASE_ARTIFACT_REQUIRED==='1';
-const artifactPath=path.resolve(process.env.RELEASE_ARTIFACT||'dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe');
+const artifactPath=path.resolve(process.env.RELEASE_ARTIFACT||`dist/ArtiSys-Almoxarifado-Setup-${version}.exe`);
 const distDir=path.dirname(artifactPath),sumsPath=path.join(distDir,'SHA256SUMS.txt'),manifestPath=path.join(distDir,'release-manifest.json');
-if(version!=='1.0.0')throw new Error(`final release version must be 1.0.0, got ${version}`);
+if(!/^\d+\.\d+\.\d+$/.test(version))throw new Error(`invalid release version: ${version}`);
 let artifacts=[];
 if(required){
   const artifactInfo=await stat(artifactPath).catch(()=>null);if(!artifactInfo?.isFile())throw new Error(`required installer is missing: ${artifactPath}`);
