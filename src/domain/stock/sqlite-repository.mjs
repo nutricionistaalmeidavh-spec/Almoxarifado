@@ -30,9 +30,14 @@ export function createSqliteStockRepository({dbPath,legacyJsonPath=null,seed={}}
     if(legacyJsonPath&&existsSync(legacyJsonPath)){initial=mergeSeed(parseJson(readFileSync(legacyJsonPath,'utf8'),seed)??seed);const backup=`${legacyJsonPath}.migrated.bak`;if(!existsSync(backup))copyFileSync(legacyJsonPath,backup);db.prepare('INSERT OR REPLACE INTO metadata(key,value) VALUES(?,?)').run('legacyMigratedAt',new Date().toISOString());}
     const bootstrap=createMemoryStockRepository(initial);db.exec('BEGIN IMMEDIATE');try{persistState(bootstrap.exportState());db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}
   }
-  const inner=createMemoryStockRepository(readState());let txDepth=0;const context=new AsyncLocalStorage();let activeOwner=null;let queue=Promise.resolve();const api={};
+  const inner=createMemoryStockRepository(readState());let txDepth=0;const context=new AsyncLocalStorage();let activeOwner=null;let queue=Promise.resolve();let revision=0;const api={};
   const wrap=(name,fn)=>{if(ENTITY_METHODS[name])return(...args)=>{const result=fn(...args);entityUpsert.run(ENTITY_METHODS[name],String(result.id),json(result));return result;};if(name==='setBalance')return(productId,warehouseId,quantity)=>{const result=fn(productId,warehouseId,quantity);balanceUpsert.run(String(productId),String(warehouseId),Number(quantity));return result;};if(name==='addMovement')return(item)=>{const result=fn(item);movementUpsert.run(String(result.id),json(result));return result;};if(name==='addInventoryCount'||name==='saveInventoryCount')return(item)=>{const result=fn(item);countUpsert.run(String(result.inventoryId),String(result.productId),json(result));return result;};if(name==='addPriceHistory')return(item)=>{const result=fn(item);priceUpsert.run(String(result.id),json(result));return result;};if(name==='replaceState')return(next)=>{const result=fn(next);persistState(result);return result;};return(...args)=>fn(...args);};
-  for(const[name,value]of Object.entries(inner))if(name!=='transaction')api[name]=typeof value==='function'?wrap(name,value):value;
+  for(const[name,value]of Object.entries(inner))if(name!=='transaction'){
+    if(typeof value!=='function'){api[name]=value;continue;}
+    const wrapped=wrap(name,value);
+    api[name]=(...args)=>{const result=wrapped(...args);if(ENTITY_METHODS[name]||['setBalance','addMovement','addInventoryCount','saveInventoryCount','addPriceHistory','replaceState'].includes(name))revision++;return result;};
+  }
+  api.revision=()=>revision;
   // One SQLite connection is shared by LAN requests.  Unrelated requests must be
   // serialized, while true nested calls in the same async context use savepoints.
   const execute=async(work)=>{
