@@ -1,0 +1,31 @@
+name: Canonical Stock and UX QA
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify all tests and JS syntax
+        run: npm run check
+      - name: QA validation
+        run: npm run qa:validate
+      - name: Security scan
+        run: npm run security
+      - name: Verify offline ECharts asset
+        run: test -s apps/web/vendor/echarts.min.js
