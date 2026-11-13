@@ -1,7 +1,7 @@
 const CONSUMPTION_TYPES=new Set(['EXIT','RESERVATION_CONSUME']);
 const LOSS_TYPES=new Set(['LOSS','DAMAGE']);
 function dateMs(value){if(value==null||value==='')return null;const ms=Date.parse(value);return Number.isFinite(ms)?ms:null;}
-function csvCell(value){const text=value==null?'':String(value);return /[",\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;}
+function csvCell(value){const raw=value==null?'':String(value);const text=typeof value==='string'&&/^[\s]*[=+@-]/.test(raw)?"'"+raw:raw;return /[",\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;}
 function productMap(repository){return new Map(repository.listProducts().map((item)=>[item.id,item]));}
 function movementMatches(repository,products,movement,filters={}){
   const p=products.get(movement.productId);

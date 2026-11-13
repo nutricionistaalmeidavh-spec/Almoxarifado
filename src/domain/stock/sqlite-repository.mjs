@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createMemoryStockRepository } from './repository.mjs';
@@ -29,9 +30,33 @@ export function createSqliteStockRepository({dbPath,legacyJsonPath=null,seed={}}
     if(legacyJsonPath&&existsSync(legacyJsonPath)){initial=mergeSeed(parseJson(readFileSync(legacyJsonPath,'utf8'),seed)??seed);const backup=`${legacyJsonPath}.migrated.bak`;if(!existsSync(backup))copyFileSync(legacyJsonPath,backup);db.prepare('INSERT OR REPLACE INTO metadata(key,value) VALUES(?,?)').run('legacyMigratedAt',new Date().toISOString());}
     const bootstrap=createMemoryStockRepository(initial);db.exec('BEGIN IMMEDIATE');try{persistState(bootstrap.exportState());db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}
   }
-  const inner=createMemoryStockRepository(readState());let txDepth=0;const api={};
+  const inner=createMemoryStockRepository(readState());let txDepth=0;const context=new AsyncLocalStorage();let activeOwner=null;let queue=Promise.resolve();const api={};
   const wrap=(name,fn)=>{if(ENTITY_METHODS[name])return(...args)=>{const result=fn(...args);entityUpsert.run(ENTITY_METHODS[name],String(result.id),json(result));return result;};if(name==='setBalance')return(productId,warehouseId,quantity)=>{const result=fn(productId,warehouseId,quantity);balanceUpsert.run(String(productId),String(warehouseId),Number(quantity));return result;};if(name==='addMovement')return(item)=>{const result=fn(item);movementUpsert.run(String(result.id),json(result));return result;};if(name==='addInventoryCount'||name==='saveInventoryCount')return(item)=>{const result=fn(item);countUpsert.run(String(result.inventoryId),String(result.productId),json(result));return result;};if(name==='addPriceHistory')return(item)=>{const result=fn(item);priceUpsert.run(String(result.id),json(result));return result;};if(name==='replaceState')return(next)=>{const result=fn(next);persistState(result);return result;};return(...args)=>fn(...args);};
   for(const[name,value]of Object.entries(inner))if(name!=='transaction')api[name]=typeof value==='function'?wrap(name,value):value;
-  api.transaction=async(work)=>{const level=txDepth++;const savepoint=`almox_tx_${level}`;if(level===0)db.exec('BEGIN IMMEDIATE');else db.exec(`SAVEPOINT ${savepoint}`);try{const result=await inner.transaction(work);txDepth-=1;if(level===0)db.exec('COMMIT');else db.exec(`RELEASE SAVEPOINT ${savepoint}`);return result;}catch(error){txDepth-=1;if(level===0)db.exec('ROLLBACK');else db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}; RELEASE SAVEPOINT ${savepoint}`);throw error;}};
+  // One SQLite connection is shared by LAN requests.  Unrelated requests must be
+  // serialized, while true nested calls in the same async context use savepoints.
+  const execute=async(work)=>{
+    const level=txDepth++;
+    const savepoint=`almox_tx_${level}`;
+    const snapshot=inner.exportState();
+    if(level===0)db.exec('BEGIN IMMEDIATE');else db.exec(`SAVEPOINT ${savepoint}`);
+    try{
+      const result=await inner.transaction(work);
+      if(level===0)db.exec('COMMIT');else db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      return result;
+    }catch(error){
+      try{if(level===0)db.exec('ROLLBACK');else db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}; RELEASE SAVEPOINT ${savepoint}`);}catch{}
+      inner.replaceState(snapshot);
+      throw error;
+    }finally{txDepth-=1;}
+  };
+  api.transaction=async(work)=>{
+    if(typeof work!=='function')throw new TypeError('transaction requires a function');
+    if(activeOwner&&context.getStore()===activeOwner)return execute(work);
+    const owner={};
+    const task=queue.then(()=>{activeOwner=owner;return context.run(owner,async()=>{try{return await execute(work);}finally{activeOwner=null;}});});
+    queue=task.then(()=>undefined,()=>undefined);
+    return task;
+  };
   api.close=()=>db.close();api.dbPath=path.resolve(dbPath);return api;
 }
