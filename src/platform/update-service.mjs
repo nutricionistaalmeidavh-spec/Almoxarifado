@@ -37,7 +37,8 @@ function validUpdate(candidate){
   return {version:String(candidate.version).replace(/^v/,''),downloadUrl:candidate.downloadUrl,sha256:candidate.sha256.toLowerCase(),size,notes:String(candidate.notes||'').slice(0,500)};
 }
 function githubAsset(release){
-  const asset=release.assets.find(a=>/^ArtiSys-Almoxarifado-Setup-\d+\.\d+\.\d+\.exe$/i.test(a.name));
+  const version=String(release.tag_name||'').replace(/^v/,'');
+  const asset=release.assets.find(a=>a.name===`ArtiSys-Almoxarifado-Setup-${version}.exe`);
   if(!asset)throw Error('No Windows installer in this release');
   const digest=String(asset.digest||'').match(/^sha256:([a-f0-9]{64})$/i)?.[1];
   return {asset,digest};
