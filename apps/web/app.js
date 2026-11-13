@@ -10,6 +10,8 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g,(c)=>({'&':'&amp;'
 let token = sessionStorage.getItem('almox-token') || '';
 let authMode = 'login';
 let selectedInventoryId = null;
+let latestRevision = null;
+let polling = false;
 let state = {dashboard:{},categories:[],suppliers:[],warehouses:[],products:[],balances:[],movements:[],inventories:[],purchaseRequests:[],purchaseOrders:[],receipts:[],costCenters:[],projects:[],departments:[],reservations:[],lots:[],serials:[],transitTransfers:[],priceHistory:[],users:[],user:null};
 
 async function request(path, options = {}, { publicRequest = false } = {}) {
@@ -72,7 +74,7 @@ function render(){
   refreshSelects();
 }
 
-async function reload(){state=await request('/api/bootstrap');$('#connection-status').textContent='Servidor local conectado';render();}
+async function reload(){state=await request('/api/bootstrap');latestRevision=state.revision;$('#connection-status').textContent='Servidor local conectado';render();}
 function showAuth(mode='login'){authMode=mode;token='';sessionStorage.removeItem('almox-token');$('#app-shell').hidden=true;$('#auth-screen').hidden=false;$('#login-field').hidden=mode==='bootstrap';$('#auth-help').textContent=mode==='bootstrap'?'Primeiro acesso: defina a senha do administrador local.':'Entrar no sistema local';}
 async function start(){try{const status=await request('/api/auth/status',{}, {publicRequest:true});if(status.needsBootstrap)return showAuth('bootstrap');if(!token)return showAuth('login');const me=await request('/api/auth/me');state.user=me.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch{showAuth('login');}}
 
@@ -116,4 +118,18 @@ function printable(title,html){const win=window.open('','_blank','noopener,noref
 $('#download-stock').addEventListener('click',()=>downloadAuthenticated('/api/reports/stock.csv','estoque.csv').catch(err=>flash(err.message,true)));$('#download-movements').addEventListener('click',()=>downloadAuthenticated('/api/reports/movements.csv','movimentacoes.csv').catch(err=>flash(err.message,true)));$('#print-stock').addEventListener('click',()=>printable('Posição de estoque',$('#report-stock').innerHTML));$('#print-labels').addEventListener('click',async()=>{try{const{items}=await request('/api/reports/labels');printable('Etiquetas',items.map(i=>`<div><strong>${esc(i.name)}</strong> — ${esc(i.barcode)}</div>`).join(''));}catch(err){flash(err.message,true);}});
 
 document.querySelectorAll('.nav button').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach((b)=>b.classList.toggle('active',b===button));document.querySelectorAll('.view').forEach((v)=>v.classList.remove('active'));$(`#view-${button.dataset.view}`).classList.add('active');$('#page-title').textContent=button.textContent;if(button.dataset.view==='sistema')loadBackups();}));
+window.addEventListener('almox-data-imported',()=>reload().catch(error=>flash(error.message,true)));
+setInterval(async()=>{
+  if(polling||!token||document.hidden)return;
+  polling=true;
+  try{
+    const result=await request('/api/changes');
+    if(result.revision!=null&&latestRevision!==null&&result.revision!==latestRevision){
+      const focused=document.activeElement;
+      if(focused&&['INPUT','TEXTAREA','SELECT'].includes(focused.tagName)){
+        $('#connection-status').textContent='Novos dados disponíveis; atualize após concluir o formulário';
+      }else await reload();
+    }
+  }catch{}finally{polling=false;}
+},15000);
 start();
