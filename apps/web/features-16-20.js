@@ -46,7 +46,11 @@ if(reportsToolbar){
     ['Estoque PDF','/api/reports/stock.pdf','estoque.pdf'],
     ['Estoque Excel','/api/reports/stock.xlsx','estoque.xlsx'],
     ['Etiquetas Code 128','/api/reports/labels.pdf','etiquetas.pdf'],
-    ['Etiquetas QR','/api/reports/labels.pdf?format=qr','etiquetas-qr.pdf']]){
+    ['Etiquetas QR','/api/reports/labels.pdf?format=qr','etiquetas-qr.pdf'],
+    ['Etiquetas EAN-13','/api/reports/labels.pdf?format=ean13','etiquetas-ean13.pdf'],
+    ['Etiquetas de endereços','/api/reports/labels.pdf?kind=locations&format=qr','enderecos-qr.pdf'],
+    ['Etiquetas de patrimônio','/api/reports/labels.pdf?kind=assets&format=qr','patrimonio-qr.pdf'],
+    ['Movimentações PDF','/api/reports/movements.pdf','movimentacoes.pdf']]){
     const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent=label;
     button.addEventListener('click',()=>downloadLocalReport(url,name).catch(e=>flash(e.message,true)));
     reportsToolbar.append(button);
