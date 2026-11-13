@@ -1,5 +1,5 @@
 param(
-  [string]$InstallerPath = "dist\ArtiSys-Almoxarifado-Setup-1.0.0.exe",
+  [string]$InstallerPath = "dist\ArtiSys-Almoxarifado-Setup-1.0.1.exe",
   [string]$BaseUrl = "http://127.0.0.1:4173"
 )
 
