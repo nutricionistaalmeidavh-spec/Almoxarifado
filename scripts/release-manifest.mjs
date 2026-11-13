@@ -8,7 +8,7 @@ export async function sha256File(filePath){
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-export async function buildReleaseManifest({artifactPath,version='1.0.0',commit=process.env.GITHUB_SHA||'local',generatedAt=new Date().toISOString()}={}){
+export async function buildReleaseManifest({artifactPath,version='1.0.1',commit=process.env.GITHUB_SHA||'local',generatedAt=new Date().toISOString()}={}){
   if(typeof artifactPath!=='string'||!artifactPath.trim()) throw new TypeError('artifactPath is required');
   const resolved=path.resolve(artifactPath);
   const info=await stat(resolved);
@@ -25,7 +25,7 @@ export async function buildReleaseManifest({artifactPath,version='1.0.0',commit=
   };
 }
 
-export async function writeReleaseFiles({artifactPath,version='1.0.0',commit=process.env.GITHUB_SHA||'local',outputDir=path.dirname(path.resolve(artifactPath)),generatedAt=new Date().toISOString()}={}){
+export async function writeReleaseFiles({artifactPath,version='1.0.1',commit=process.env.GITHUB_SHA||'local',outputDir=path.dirname(path.resolve(artifactPath)),generatedAt=new Date().toISOString()}={}){
   const manifest=await buildReleaseManifest({artifactPath,version,commit,generatedAt});
   const dir=path.resolve(outputDir);
   await mkdir(dir,{recursive:true});
@@ -38,7 +38,7 @@ export async function writeReleaseFiles({artifactPath,version='1.0.0',commit=pro
 
 const isMain=Boolean(process.argv[1])&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href;
 if(isMain){
-  const artifactPath=process.argv[2]||process.env.RELEASE_ARTIFACT||path.resolve('dist/ArtiSys-Almoxarifado-Setup-1.0.0.exe');
-  const result=await writeReleaseFiles({artifactPath,version:process.env.npm_package_version||'1.0.0',commit:process.env.GITHUB_SHA||'local',outputDir:path.dirname(path.resolve(artifactPath))});
+  const artifactPath=process.argv[2]||process.env.RELEASE_ARTIFACT||path.resolve('dist/ArtiSys-Almoxarifado-Setup-1.0.1.exe');
+  const result=await writeReleaseFiles({artifactPath,version:process.env.npm_package_version||'1.0.1',commit:process.env.GITHUB_SHA||'local',outputDir:path.dirname(path.resolve(artifactPath))});
   process.stdout.write(`${JSON.stringify(result.manifest,null,2)}\n`);
 }
