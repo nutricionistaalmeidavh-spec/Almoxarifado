@@ -44,10 +44,6 @@ Serial/balança e impressão por transporte quando disponíveis; ausência de ha
 ### 20 — Desktop final
 Runtime central para base, API/PWA, documentos, backup, configurações, logs, hardware e OCR. Electron com `contextIsolation`, sandbox, `nodeIntegration: false` e bloqueio de janelas externas.
 
-### Atualização opcional do aplicativo Windows
-
-Instalações empacotadas verificam atualizações ao abrir, com aviso e opção de baixar/instalar, exigindo confirmação e SHA-256 válido. O núcleo local-first continua funcionando sem internet. Como o repositório do código-fonte é privado, a distribuição automática para clientes depende de um catálogo HTTPS público de **binários**, sem expor código nem tokens. Configuração e limites: [docs/updates.md](docs/updates.md).
-
 ### 21 — Instalador e atualização
 - Electron + NSIS para **Windows x64**.
 - Artefato final: `ArtiSys-Almoxarifado-Setup-1.0.0.exe`.

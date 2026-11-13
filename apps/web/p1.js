@@ -7,7 +7,7 @@ function inject(){const group=document.querySelector('button[data-view="wms"]')?
 <div class="panel"><h2>Patrimônio</h2><form id="p1-asset-form" class="p1-form"><input name="tag" placeholder="Tag / QR" required><input name="name" placeholder="Ferramenta / equipamento" required><input name="serial" placeholder="Série"><input name="category" placeholder="Categoria"><button class="btn">Cadastrar</button></form><div id="p1-assets" class="p1-table top-gap"></div><hr><h3>Foto / documento do patrimônio</h3><form id="p1-asset-document-form" class="p1-form"><select name="assetId" id="p1-document-asset" required></select><select name="kind"><option value="photo">Foto</option><option value="invoice">Nota fiscal</option><option value="receipt">Comprovante</option><option value="other">Outro</option></select><input name="file" id="p1-asset-document-file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,text/plain" required><button class="btn secondary">Anexar</button></form></div>
 <div class="panel"><h2>Fornecedores do produto</h2><form id="p1-supplier-form" class="p1-form"><select name="productId" class="p1-product" required></select><select name="supplierId" class="p1-supplier" required></select><input name="supplierSku" placeholder="SKU fornecedor"><input name="package" placeholder="Embalagem"><input name="unitCost" type="number" min="0" step="0.01" placeholder="Preço"><input name="leadTimeDays" type="number" min="0" placeholder="Lead time (dias)"><input name="moq" type="number" min="0" step="0.001" placeholder="MOQ"><label><input name="preferred" type="checkbox"> Preferencial</label><button class="btn">Vincular</button></form><div id="p1-suppliers" class="p1-table top-gap"></div></div>
 <div class="panel"><h2>Unidades / embalagens</h2><form id="p1-uom-form" class="p1-form"><select name="productId" class="p1-product" required></select><input name="unit" placeholder="CX / FD / PC" required><input name="factor" type="number" min="0.0001" step="0.0001" placeholder="Fator p/ unidade base" required><input name="barcode" placeholder="Código de barras"><button class="btn">Salvar conversão</button></form><div id="p1-uoms" class="p1-table top-gap"></div></div>
-<div class="panel"><h2>Qualidade / quarentena</h2><form id="p1-quality-form" class="p1-form"><select name="productId" class="p1-product" required></select><select name="warehouseId" class="p1-warehouse" required></select><input name="quantity" type="number" min="0.001" step="0.001" placeholder="Quantidade" required><input name="sourceId" placeholder="Recebimento / NF"><button class="btn">Colocar em inspeção</button></form><div id="p1-quality" class="p1-table top-gap"></div></div>
+<div class="panel"><h2>Qualidade / quarentena</h2><form id="p1-quality-form" class="p1-form"><select name="productId" class="p1-product" required></select><select name="warehouseId" class="p1-warehouse" required></select><input name="quantity" type="number" min="0.001" step="0.001" placeholder="Quantidade" required><input name="sourceId" placeholder="Ref. externa do material não contabilizado" required><button class="btn">Colocar em inspeção</button></form><div id="p1-quality" class="p1-table top-gap"></div></div>
 <div class="panel p1-wide"><h2>Reposição avançada</h2><div class="toolbar"><select id="p1-repl-warehouse" class="p1-warehouse"></select><input id="p1-repl-days" type="number" min="1" value="30"><input id="p1-repl-safety" type="number" min="0" value="7"><button id="p1-repl-load" class="btn">Calcular</button></div><div id="p1-replenishment" class="p1-table top-gap"></div></div>
 <div class="panel p1-wide"><h2>Central de alertas</h2><div id="p1-alerts" class="stack"></div></div></div></section>`);const link=document.createElement('link');link.rel='stylesheet';link.href='/p1.css';document.head.appendChild(link);}
 function table(headers,rows){if(!rows.length)return'<div class="empty">Nenhum registro.</div>';return`<table><thead><tr>${headers.map(x=>`<th>${esc(x[1])}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${headers.map(x=>`<td>${r[x[0]]?.html?r[x[0]].html:esc(r[x[0]]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
@@ -17,7 +17,65 @@ $('#p1-suppliers').innerHTML=table([['product','Produto'],['supplier','Fornecedo
 $('#p1-uoms').innerHTML=table([['product','Produto'],['unit','Unidade'],['factor','Fator'],['barcode','Código']],data.unitConversions.map(x=>({product:product(x.productId)?.name||x.productId,unit:x.unit,factor:x.factor,barcode:x.barcode||''})));
 $('#p1-quality').innerHTML=table([['product','Produto'],['warehouse','Depósito'],['qty','Qtd.'],['status','Status'],['action','Ação']],data.qualityHolds.map(x=>({product:product(x.productId)?.name||x.productId,warehouse:data.warehouses.find(w=>w.id===x.warehouseId)?.name||x.warehouseId,qty:x.remainingQuantity,status:x.status,action:{html:x.status==='OPEN'?`<button class="btn secondary p1-release" data-id="${esc(x.id)}" data-qty="${esc(x.remainingQuantity)}">Liberar</button> <button class="btn danger p1-reject" data-id="${esc(x.id)}" data-qty="${esc(x.remainingQuantity)}">Rejeitar</button>`:''}})));
 $('#p1-alerts').innerHTML=data.alerts.length?data.alerts.map(a=>`<div class="panel p1-alert-${esc(a.severity)}"><strong>${esc(a.type)}</strong><div>${esc(a.message)}</div></div>`).join(''):'<div class="empty">Sem alertas críticos.</div>';wireRows();}
-function wireRows(){document.querySelectorAll('.p1-checkout').forEach(b=>b.onclick=async()=>{const assignedToUserId=prompt('ID do responsável (opcional):')||null,projectId=prompt('ID da obra/projeto (opcional):')||null,expectedCheckinAt=prompt('Previsão de devolução AAAA-MM-DD (opcional):')||null;try{await api(`/api/assets/${b.dataset.id}/checkout`,{method:'POST',body:JSON.stringify({assignedToUserId,projectId,expectedCheckinAt})});await load();}catch(e){flash(e.message,true);}});document.querySelectorAll('.p1-checkin').forEach(b=>b.onclick=async()=>{try{await api(`/api/assets/${b.dataset.id}/checkin`,{method:'POST',body:JSON.stringify({conditionIn:'OK'})});await load();}catch(e){flash(e.message,true);}});document.querySelectorAll('.p1-release').forEach(b=>b.onclick=()=>qualityAction(b,'release'));document.querySelectorAll('.p1-reject').forEach(b=>b.onclick=()=>qualityAction(b,'reject'));}
+const operationDialog=document.createElement('dialog');
+operationDialog.id='p1-operation-dialog';
+operationDialog.style.cssText='border:1px solid #cbd5e1;border-radius:12px;padding:22px;min-width:min(90vw,500px);max-width:95vw';
+operationDialog.innerHTML='<form id="p1-operation-form"><h2 id="p1-operation-title"></h2><div id="p1-operation-fields"></div><div id="p1-operation-error" role="alert" class="error"></div><div class="toolbar"><button type="button" class="btn secondary" id="p1-operation-cancel">Cancelar</button><button type="submit" class="btn" id="p1-operation-confirm">Confirmar</button></div></form>';
+document.body.append(operationDialog);
+$('#p1-operation-cancel').onclick=()=>operationDialog.close();
+let activeOperation=null;
+function dialogSelect(label,name,options){
+  const wrap=document.createElement('label');wrap.textContent=label;wrap.style.display='block';
+  const select=document.createElement('select');select.name=name;select.style.width='100%';
+  select.append(new Option('— Não especificado —',''));
+  options.forEach(x=>select.append(new Option(x.label,x.id)));
+  wrap.append(select);return wrap;
+}
+function dialogInput(label,name,type='text',required=false){
+  const wrap=document.createElement('label');wrap.textContent=label;wrap.style.display='block';
+  const input=document.createElement('input');input.name=name;input.type=type;input.required=required;
+  input.style.width='100%';wrap.append(input);return wrap;
+}
+function openAssetDialog(assetId,action,quantity=null){
+  activeOperation={assetId,action,quantity};
+  const fields=$('#p1-operation-fields');fields.replaceChildren();
+  $('#p1-operation-title').textContent=action==='checkout'?'Retirar ferramenta':action==='checkin'?'Devolver ferramenta':'Conferir quarentena';
+  if(action==='checkout'){
+    fields.append(dialogSelect('Responsável','assignedToUserId',(data.users||[]).map(x=>({id:x.id,label:x.name||x.login}))));
+    fields.append(dialogSelect('Obra/projeto','projectId',(data.projects||[]).map(x=>({id:x.id,label:x.name}))));
+    fields.append(dialogInput('Previsão de devolução','expectedCheckinAt','date'));
+    fields.append(dialogSelect('Condição de saída','conditionOut',['OK','USED','DAMAGED'].map(x=>({id:x,label:x}))));
+  }else if(action==='checkin'){
+    fields.append(dialogSelect('Condição na devolução','conditionIn',['OK','USED','DAMAGED','MAINTENANCE'].map(x=>({id:x,label:x}))));
+    fields.append(dialogInput('Observações','notes'));
+  }else{
+    const amount=dialogInput('Quantidade a '+(action==='release'?'liberar':'rejeitar'),'quantity','number',true);
+    amount.querySelector('input').min='0.001';amount.querySelector('input').max=String(quantity);
+    amount.querySelector('input').step='any';amount.querySelector('input').value=String(quantity);
+    fields.append(amount,dialogInput('Motivo','reason'));
+  }
+  $('#p1-operation-error').textContent='';
+  operationDialog.showModal();
+}
+$('#p1-operation-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!activeOperation)return;
+  const {assetId,action}=activeOperation,body=Object.fromEntries(new FormData(event.currentTarget));
+  for(const key of Object.keys(body))if(body[key]==='')delete body[key];
+  if(body.quantity!==undefined)body.quantity=Number(body.quantity);
+  const button=$('#p1-operation-confirm');button.disabled=true;button.textContent='Registrando…';
+  try{
+    const url=['checkout','checkin'].includes(action)?'/api/assets/'+encodeURIComponent(assetId)+'/'+action:'/api/quality/holds/'+encodeURIComponent(assetId)+'/'+action;
+    await api(url,{method:'POST',body:JSON.stringify(body)});
+    operationDialog.close();activeOperation=null;await load();flash('Operação registrada com sucesso.');
+  }catch(error){$('#p1-operation-error').textContent=error.message;}
+  finally{button.disabled=false;button.textContent='Confirmar';}
+});
+function wireRows(){
+  document.querySelectorAll('.p1-checkout').forEach(b=>b.onclick=()=>openAssetDialog(b.dataset.id,'checkout'));
+  document.querySelectorAll('.p1-checkin').forEach(b=>b.onclick=()=>openAssetDialog(b.dataset.id,'checkin'));
+  document.querySelectorAll('.p1-release').forEach(b=>b.onclick=()=>openAssetDialog(b.dataset.id,'release',Number(b.dataset.qty)));
+  document.querySelectorAll('.p1-reject').forEach(b=>b.onclick=()=>openAssetDialog(b.dataset.id,'reject',Number(b.dataset.qty)));
+}
 async function qualityAction(b,action){try{await api(`/api/quality/holds/${b.dataset.id}/${action}`,{method:'POST',body:JSON.stringify({quantity:Number(b.dataset.qty)})});await load();}catch(e){flash(e.message,true);}}
 async function load(){data=await api('/api/p1/bootstrap');render();return data;}
 inject();

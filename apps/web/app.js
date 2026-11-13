@@ -1,4 +1,5 @@
 import { createKeyboardBarcodeScanner, findProductByBarcode, scanBarcodePhoto } from './barcode.js';
+import { mountPurchaseReceipts } from './receipt-ui.js';
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
@@ -9,6 +10,8 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g,(c)=>({'&':'&amp;'
 let token = sessionStorage.getItem('almox-token') || '';
 let authMode = 'login';
 let selectedInventoryId = null;
+let latestRevision = null;
+let polling = false;
 let state = {dashboard:{},categories:[],suppliers:[],warehouses:[],products:[],balances:[],movements:[],inventories:[],purchaseRequests:[],purchaseOrders:[],receipts:[],costCenters:[],projects:[],departments:[],reservations:[],lots:[],serials:[],transitTransfers:[],priceHistory:[],users:[],user:null};
 
 async function request(path, options = {}, { publicRequest = false } = {}) {
@@ -59,8 +62,8 @@ function render(){
   $('#products-table').innerHTML=table([['sku','SKU'],['barcode','Código'],['name','Produto'],['stock','Estoque'],['min','Mín.'],['target','Alvo'],['cost','Custo méd.']],state.products.map((p)=>({sku:p.sku,barcode:p.barcode||'',name:p.name,stock:number.format(totals.get(p.id)||0),min:number.format(p.minStock||0),target:number.format(p.targetStock||0),cost:money.format(p.avgCost??p.unitCost??0)})));
   $('#inventories-table').innerHTML=state.inventories.length?`<table><thead><tr><th>Início</th><th>Depósito</th><th>Status</th><th>Itens</th><th></th></tr></thead><tbody>${state.inventories.map((i)=>`<tr><td>${esc(new Date(i.startedAt).toLocaleString('pt-BR'))}</td><td>${esc(warehouse(i.warehouseId)?.name||i.warehouseId)}</td><td>${esc(i.status)}</td><td>${esc(i.productCount)}</td><td>${i.status==='OPEN'?`<button class="btn secondary open-inventory" data-id="${esc(i.id)}">Abrir</button>`:''}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhum inventário.</div>';
   document.querySelectorAll('.open-inventory').forEach((b)=>b.addEventListener('click',()=>loadInventory(b.dataset.id)));
-  $('#purchases-table').innerHTML=table([['request','Solicitação'],['status','Status'],['supplier','Fornecedor'],['total','Total'],['action','Ação']],state.purchaseOrders.map((o)=>({request:o.requestId.slice(0,8),status:o.status,supplier:supplier(o.supplierId)?.name||o.supplierId,total:money.format(o.total||0),action:{html:o.status==='ORDERED'?`<button class="btn secondary receive-order" data-id="${esc(o.id)}">Receber</button>`:''}})));
-  document.querySelectorAll('.receive-order').forEach((b)=>b.addEventListener('click',()=>receiveOrder(b.dataset.id)));
+  $('#purchases-table').innerHTML=table([['request','Solicitação'],['status','Status'],['supplier','Fornecedor'],['total','Total'],['action','Ação']],state.purchaseOrders.map((o)=>({request:o.requestId.slice(0,8),status:o.status,supplier:supplier(o.supplierId)?.name||o.supplierId,total:money.format(o.total||0),action:{html:['ORDERED','PARTIALLY_RECEIVED'].includes(o.status)?`<button class="btn secondary receive-order" data-id="${esc(o.id)}">Conferir recebimento</button>`:''}})));
+  document.querySelectorAll('.receive-order').forEach((b)=>b.addEventListener('click',()=>purchaseReceipts.open(b.dataset.id)));
   $('#cost-centers-table').innerHTML=table([['code','Código'],['name','Nome']],state.costCenters); $('#projects-table').innerHTML=table([['code','Código'],['name','Nome']],state.projects); $('#departments-table').innerHTML=table([['code','Código'],['name','Nome']],state.departments);
   const advancedRows=[...state.reservations.map((r)=>({kind:'Reserva',ref:r.reference||r.id.slice(0,8),product:product(r.productId)?.name||r.productId,status:r.status,action:{html:r.status==='ACTIVE'?`<button class="btn secondary reservation-consume" data-id="${esc(r.id)}">Consumir</button> <button class="btn secondary reservation-release" data-id="${esc(r.id)}">Liberar</button>`:''}})),...state.transitTransfers.map((t)=>({kind:'Trânsito',ref:t.id.slice(0,8),product:product(t.productId)?.name||t.productId,status:t.status,action:{html:t.status==='IN_TRANSIT'?`<button class="btn secondary transit-receive" data-id="${esc(t.id)}">Receber</button>`:''}}))];
   $('#advanced-table').innerHTML=table([['kind','Tipo'],['ref','Referência'],['product','Produto'],['status','Status'],['action','Ação']],advancedRows);
@@ -71,7 +74,7 @@ function render(){
   refreshSelects();
 }
 
-async function reload(){state=await request('/api/bootstrap');$('#connection-status').textContent='Servidor local conectado';render();}
+async function reload(){state=await request('/api/bootstrap');latestRevision=state.revision;$('#connection-status').textContent='Servidor local conectado';render();}
 function showAuth(mode='login'){authMode=mode;token='';sessionStorage.removeItem('almox-token');$('#app-shell').hidden=true;$('#auth-screen').hidden=false;$('#login-field').hidden=mode==='bootstrap';$('#auth-help').textContent=mode==='bootstrap'?'Primeiro acesso: defina a senha do administrador local.':'Entrar no sistema local';}
 async function start(){try{const status=await request('/api/auth/status',{}, {publicRequest:true});if(status.needsBootstrap)return showAuth('bootstrap');if(!token)return showAuth('login');const me=await request('/api/auth/me');state.user=me.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch{showAuth('login');}}
 
@@ -88,7 +91,7 @@ $('#close-inventory').addEventListener('click',async()=>{if(!selectedInventoryId
 
 $('#purchase-request-form').addEventListener('submit',async(e)=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{const result=await request('/api/purchases/requests',{method:'POST',body:JSON.stringify({warehouseId:d.warehouseId,items:[{productId:d.productId,quantity:Number(d.quantity)}],notes:d.notes})});state=result.bootstrap;render();flash('Solicitação criada.');}catch(err){flash(err.message,true);}});
 $('#purchase-action-form').addEventListener('submit',async(e)=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{let result;if(d.action==='quote'){const req=state.purchaseRequests.find(r=>r.id===d.requestId);result=await request(`/api/purchases/requests/${d.requestId}/quotes`,{method:'POST',body:JSON.stringify({supplierId:d.supplierId,items:req.items.map(i=>({...i,unitCost:Number(d.unitCost)}))})});}else if(d.action==='approve')result=await request(`/api/purchases/requests/${d.requestId}/approve`,{method:'POST',body:'{}'});else result=await request('/api/purchases/orders',{method:'POST',body:JSON.stringify({requestId:d.requestId,supplierId:d.supplierId})});state=result.bootstrap;render();flash('Fluxo de compra atualizado.');}catch(err){flash(err.message,true);}});
-async function receiveOrder(id){try{const result=await request(`/api/purchases/orders/${id}/receive`,{method:'POST',body:'{}'});state=result.bootstrap;render();flash('Pedido recebido e estoque atualizado.');}catch(err){flash(err.message,true);}}
+const purchaseReceipts=mountPurchaseReceipts({getState:()=>state,request,onSaved:result=>{state=result.bootstrap;render();},notify:flash});
 
 document.querySelectorAll('.management-form').forEach((form)=>form.addEventListener('submit',async(e)=>{e.preventDefault();try{const result=await request(`/api/management/${form.dataset.kind}`,{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});state=result.bootstrap;render();form.reset();}catch(err){flash(err.message,true);}}));
 $('#reservation-form').addEventListener('submit',async(e)=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{const result=await request('/api/advanced/reservations',{method:'POST',body:JSON.stringify({...d,quantity:Number(d.quantity)})});state=result.bootstrap;render();}catch(err){flash(err.message,true);}});
@@ -115,4 +118,18 @@ function printable(title,html){const win=window.open('','_blank','noopener,noref
 $('#download-stock').addEventListener('click',()=>downloadAuthenticated('/api/reports/stock.csv','estoque.csv').catch(err=>flash(err.message,true)));$('#download-movements').addEventListener('click',()=>downloadAuthenticated('/api/reports/movements.csv','movimentacoes.csv').catch(err=>flash(err.message,true)));$('#print-stock').addEventListener('click',()=>printable('Posição de estoque',$('#report-stock').innerHTML));$('#print-labels').addEventListener('click',async()=>{try{const{items}=await request('/api/reports/labels');printable('Etiquetas',items.map(i=>`<div><strong>${esc(i.name)}</strong> — ${esc(i.barcode)}</div>`).join(''));}catch(err){flash(err.message,true);}});
 
 document.querySelectorAll('.nav button').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach((b)=>b.classList.toggle('active',b===button));document.querySelectorAll('.view').forEach((v)=>v.classList.remove('active'));$(`#view-${button.dataset.view}`).classList.add('active');$('#page-title').textContent=button.textContent;if(button.dataset.view==='sistema')loadBackups();}));
+window.addEventListener('almox-data-imported',()=>reload().catch(error=>flash(error.message,true)));
+setInterval(async()=>{
+  if(polling||!token||document.hidden)return;
+  polling=true;
+  try{
+    const result=await request('/api/changes');
+    if(result.revision!=null&&latestRevision!==null&&result.revision!==latestRevision){
+      const focused=document.activeElement;
+      if(focused&&['INPUT','TEXTAREA','SELECT'].includes(focused.tagName)){
+        $('#connection-status').textContent='Novos dados disponíveis; atualize após concluir o formulário';
+      }else await reload();
+    }
+  }catch{}finally{polling=false;}
+},15000);
 start();
