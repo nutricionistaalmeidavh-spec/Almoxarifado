@@ -26,6 +26,6 @@ test('release files contain the same hash and manifest',async()=>{
   const result=await writeReleaseFiles({artifactPath:artifact,version:VERSION,commit:'def456',outputDir:dir,generatedAt:'2026-09-12T22:00:00.000Z'});
   const sums=await readFile(result.sumsPath,'utf8');
   const parsed=JSON.parse(await readFile(result.manifestPath,'utf8'));
-  assert.match(sums,new RegExp(`^${parsed.sha256}  ArtiSys-Almoxarifado-Setup-1\\.0\\.0\\.exe\\n$`));
+  assert.match(sums,new RegExp(`^${parsed.sha256}  ArtiSys-Almoxarifado-Setup-1\\.0\\.1\\.exe\\n$`));
   assert.equal(parsed.sha256,result.manifest.sha256);
 });
