@@ -23,6 +23,7 @@ test('receipt operationKey is idempotent even after order completes',async()=>{
   const stock=createStockService({repository:repo});
   const purchasing=createPurchasingService({repository:repo,stock});
   const request=purchasing.createRequest({warehouseId:'w1',requestedBy:'u1',items:[{productId:'p1',quantity:2}]});
+  purchasing.addQuote({requestId:request.id,supplierId:'s1',userId:'u1',items:[{productId:'p1',quantity:2,unitCost:5}]});
   purchasing.approveRequest({requestId:request.id,userId:'u1'});
   const order=purchasing.createOrder({requestId:request.id,supplierId:'s1',userId:'u1'});
   const input={orderId:order.id,userId:'u1',items:[{productId:'p1',quantity:2}],operationKey:'client-123'};
