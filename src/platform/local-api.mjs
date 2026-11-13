@@ -12,8 +12,11 @@ import { createWmsService } from '../domain/wms/wms-service.mjs';
 import { createBackupService } from '../domain/backup/backup-service.mjs';
 import { buildDashboard, buildLabels, buildMovementCsv, buildStockCsv } from '../domain/reports/report-service.mjs';
 import { createLocalApiExtensions } from './local-api-extensions.mjs';
+import { exportStockPdf, exportStockXlsx, exportLabelsPdf } from '../domain/reports/export-service.mjs';
+import { previewProductsCsv, importProductsCsv } from '../domain/catalog/csv-import-service.mjs';
 
 function sendJson(res,status,body){const json=JSON.stringify(body);res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(json);}
+function sendFile(res,contentType,filename,body){res.writeHead(200,{'Content-Type':contentType,'Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'no-store','Content-Length':body.length});res.end(body);}
 function sendText(res,status,body,contentType='text/plain; charset=utf-8'){res.writeHead(status,{'Content-Type':contentType,'Cache-Control':'no-store'});res.end(body);}
 async function readJson(req){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>2*1024*1024)throw new DomainError('PAYLOAD_TOO_LARGE','request body is too large');chunks.push(chunk);}if(!chunks.length)return{};try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new DomainError('INVALID_JSON','request body must be valid JSON');}}
 function tokenFrom(req){const value=req.headers.authorization||'';if(value.startsWith('Bearer '))return value.slice(7).trim();return String(req.headers['x-session-token']||'').trim();}
@@ -78,6 +81,11 @@ export function createLocalApi({repository,publish=async()=>{},backupDir=path.re
       if(req.method==='POST'&&pathname==='/api/backup/import'){const actor=auth.require(token,'backup.manage');const body=await readJson(req);backup.importPayload(body);return sendJson(res,200,{bootstrap:bootstrap(actor)});}
       if(req.method==='GET'&&pathname==='/api/reports/stock.csv'){auth.require(token,'reports.export');return sendText(res,200,buildStockCsv(repository),'text/csv; charset=utf-8');}
       if(req.method==='GET'&&pathname==='/api/reports/movements.csv'){auth.require(token,'reports.export');return sendText(res,200,buildMovementCsv(repository),'text/csv; charset=utf-8');}
+      if(req.method==='GET'&&pathname==='/api/reports/stock.pdf'){auth.require(token,'reports.export');return sendFile(res,'application/pdf','estoque.pdf',await exportStockPdf(repository));}
+      if(req.method==='GET'&&pathname==='/api/reports/stock.xlsx'){auth.require(token,'reports.export');return sendFile(res,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','estoque.xlsx',await exportStockXlsx(repository));}
+      if(req.method==='GET'&&pathname==='/api/reports/labels.pdf'){auth.require(token,'reports.export');return sendFile(res,'application/pdf','etiquetas.pdf',await exportLabelsPdf(repository,{format:url.searchParams.get('format')==='qr'?'qr':'code128'}));}
+      if(req.method==='POST'&&pathname==='/api/import/products/preview'){auth.require(token,'catalog.manage');const body=await readJson(req);return sendJson(res,200,previewProductsCsv(repository,body.csv));}
+      if(req.method==='POST'&&pathname==='/api/import/products/commit'){const actor=auth.require(token,'catalog.manage');const body=await readJson(req);const result=await importProductsCsv(repository,body.csv);return sendJson(res,201,{...result,bootstrap:bootstrap(actor)});}
       if(req.method==='GET'&&pathname==='/api/reports/labels'){auth.require(token,'reports.export');return sendJson(res,200,{items:buildLabels(repository)});}
       if(await extensions(req,res,url,token))return;return sendJson(res,404,{error:'NOT_FOUND'});
     }catch(error){if(error instanceof DomainError)return sendJson(res,statusFor(error),{error:error.code,message:error.message,details:error.details});console.error(error);return sendJson(res,500,{error:'INTERNAL_ERROR',message:'internal local server error'});}
