@@ -5,7 +5,7 @@ import { sha256File } from './release-manifest.mjs';
 const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
 const version=process.env.npm_package_version||pkg.version;
 const required=process.env.RELEASE_ARTIFACT_REQUIRED==='1';
-const artifactPath=path.resolve(process.env.RELEASE_ARTIFACT||'dist/ArtiSys-Almoxarifado-Setup-${version}.exe');
+const artifactPath=path.resolve(process.env.RELEASE_ARTIFACT||`dist/ArtiSys-Almoxarifado-Setup-${version}.exe`);
 const distDir=path.dirname(artifactPath),sumsPath=path.join(distDir,'SHA256SUMS.txt'),manifestPath=path.join(distDir,'release-manifest.json');
 if(!/^\d+\.\d+\.\d+$/.test(version))throw new Error(`invalid release version: ${version}`);
 let artifacts=[];
