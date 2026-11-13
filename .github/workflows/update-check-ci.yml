@@ -1,0 +1,32 @@
+name: Desktop Update Check CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/desktop/src/electron-main.mjs'
+      - 'apps/desktop/src/update-controller.mjs'
+      - 'src/platform/update-service.mjs'
+      - 'tests/update-*.test.mjs'
+      - 'package.json'
+      - '.github/workflows/update-check-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install dependencies
+        run: npm ci
+      - name: Test and syntax gate
+        run: npm run check
