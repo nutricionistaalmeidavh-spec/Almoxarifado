@@ -5,3 +5,5 @@ checks: Node, QA, security, Windows NSIS, Playwright smoke, instalação/reinsta
 publish: release pública somente após aprovação integral dos gates
 artifacts: ArtiSys-Almoxarifado-Setup-1.0.2.exe, SHA256SUMS.txt, release-manifest.json
 channel: GitHub Releases /releases/latest
+
+retry: v1.0.2 — Playwright submit locator aligned with Editar/Cancelar controls; GitHub Actions smoke and SHA-256 gates required
