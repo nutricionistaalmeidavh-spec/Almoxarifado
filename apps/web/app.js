@@ -62,7 +62,7 @@ function render(){
   const totals=new Map(); for(const b of state.balances)totals.set(b.productId,(totals.get(b.productId)||0)+b.quantity);
   const canManageProducts=['ADMIN','ALMOXARIFE'].includes(state.user?.role);
   $('#products-table').innerHTML=table(
-    [['sku','SKU'],['barcode','Código'],['name','Produto'],['stock','Estoque'],['min','Mín.'],['target','Alvo'],['cost','Custo méd.'],['status','Situação'],['actions','Ações']],
+    [['sku','SKU'],['name','Produto'],['actions','Ações'],['status','Situação'],['barcode','Código'],['stock','Estoque'],['min','Mín.'],['target','Alvo'],['cost','Custo méd.']],
     state.products.map((p)=>({
       sku:p.sku,barcode:p.barcode||'',name:p.name,stock:number.format(totals.get(p.id)||0),
       min:number.format(p.minStock||0),target:number.format(p.targetStock||0),
