@@ -1,6 +1,7 @@
-ArtiSys Almoxarifado 1.0.1 — final release validation trigger
-source: main após merge da PR release/v1.0.1-20261113
-checks: Node test/syntax, segurança, QA, Windows build e instalação/reinstalação
-publish: somente após smoke de Windows e SHA-256/manifest aprovados
-artifacts: ArtiSys-Almoxarifado-Setup-1.0.1.exe, SHA256SUMS.txt, release-manifest.json
+ArtiSys Almoxarifado v1.0.2 — Windows x64 — release gatilhada pela main
+source: main após merge da PR de release/v1.0.2-20261119
+changes: editar, desativar/reativar e excluir materiais com proteção de histórico e persistência SQLite/JSON
+checks: Node, QA, security, Windows NSIS, Playwright smoke, instalação/reinstalação, SHA-256
+publish: release pública somente após aprovação integral dos gates
+artifacts: ArtiSys-Almoxarifado-Setup-1.0.2.exe, SHA256SUMS.txt, release-manifest.json
 channel: GitHub Releases /releases/latest
