@@ -30,7 +30,7 @@ export function createFileStockRepository({ filePath, seed = {} } = {}) {
     writeFileSync(tmp, `${JSON.stringify(inner.exportState(), null, 2)}\n`, 'utf8');
     renameSync(tmp, filePath);
   };
-  const mutating = new Set(Object.keys(inner).filter((name) => /^(save|add|set|replace)/.test(name)));
+  const mutating = new Set(Object.keys(inner).filter((name) => /^(save|add|set|replace|remove)/.test(name)));
   const repository = {};
   for (const [name, value] of Object.entries(inner)) {
     if (name === 'transaction') continue;
