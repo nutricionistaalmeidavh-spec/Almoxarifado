@@ -108,3 +108,9 @@ input::placeholder{color:#94a3b8}
 @media(max-width:520px){.cards{grid-template-columns:1fr}.metric-card{min-height:88px}.topbar-actions .status{width:100%;text-align:center}.operation-tabs,.settings-tabs{grid-template-columns:1fr}.btn{width:100%}.toolbar .btn,.toolbar label.btn{width:auto;flex:1 1 150px}.main{padding-inline:12px}.panel{border-radius:12px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{.sidebar,.topbar,.no-print,.settings-tabs,.operation-tabs{display:none!important}.shell{display:block}.main{padding:0;max-width:none}.panel{box-shadow:none;border:0}.view{display:block!important}.table-wrap{border:0;overflow:visible}}
+
+/* Material catalog actions: compact controls on desktop and small screens. */
+.product-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:260px}
+.product-actions .btn{width:auto;min-height:32px;padding:6px 10px;font-size:12px;white-space:nowrap}
+.product-actions .product-delete{color:#b91c1c;border-color:#fecaca}
+.product-actions .product-delete:hover{background:#fef2f2;border-color:#f87171}
