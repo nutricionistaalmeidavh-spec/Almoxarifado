@@ -21,7 +21,7 @@ function sendText(res,status,body,contentType='text/plain; charset=utf-8'){res.w
 async function readJson(req){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>2*1024*1024)throw new DomainError('PAYLOAD_TOO_LARGE','request body is too large');chunks.push(chunk);}if(!chunks.length)return{};try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new DomainError('INVALID_JSON','request body must be valid JSON');}}
 function tokenFrom(req){const value=req.headers.authorization||'';if(value.startsWith('Bearer '))return value.slice(7).trim();return String(req.headers['x-session-token']||'').trim();}
 function isLoopback(req){const address=String(req.socket?.remoteAddress||'');return address==='127.0.0.1'||address==='::1'||address==='::ffff:127.0.0.1';}
-function statusFor(error){if(error.code==='AUTH_REQUIRED'||error.code==='INVALID_CREDENTIALS')return 401;if(error.code==='FORBIDDEN')return 403;if(error.code==='AUTH_THROTTLED')return 429;if(error.code==='PAYLOAD_TOO_LARGE'||error.code==='DOCUMENT_TOO_LARGE')return 413;if(error.code==='OCR_UNAVAILABLE'||error.code==='HARDWARE_UNAVAILABLE')return 503;if(/NOT_FOUND$/.test(error.code))return 404;return 400;}
+function statusFor(error){if(error.code==='PRODUCT_IN_USE')return 409;if(error.code==='AUTH_REQUIRED'||error.code==='INVALID_CREDENTIALS')return 401;if(error.code==='FORBIDDEN')return 403;if(error.code==='AUTH_THROTTLED')return 429;if(error.code==='PAYLOAD_TOO_LARGE'||error.code==='DOCUMENT_TOO_LARGE')return 413;if(error.code==='OCR_UNAVAILABLE'||error.code==='HARDWARE_UNAVAILABLE')return 503;if(/NOT_FOUND$/.test(error.code))return 404;return 400;}
 
 export function createLocalApi({repository,publish=async()=>{},backupDir=path.resolve('.data/backups'),documentDir=path.resolve('.data/documents'),ocrAdapter=null,hardwareAdapter=null}={}){
   if(!repository)throw new TypeError('repository is required');
@@ -43,6 +43,15 @@ export function createLocalApi({repository,publish=async()=>{},backupDir=path.re
       if(req.method==='GET'&&pathname==='/api/changes'){auth.require(token,'stock.view');return sendJson(res,200,{revision:repository.revision?.()??null});}
       if(req.method==='POST'&&pathname==='/api/users'){const body=await readJson(req);const user=auth.createUser(token,body);return sendJson(res,201,{user});}
 
+      const productAction=pathname.match(/^\/api\/catalog\/products\/([^/]+)$/);
+      if(productAction&&(req.method==='PATCH'||req.method==='DELETE')){
+        const actor=auth.require(token,'catalog.manage');
+        const id=productAction[1];
+        const item=req.method==='PATCH'
+          ?catalog.updateProduct(id,await readJson(req))
+          :await repository.transaction(()=>catalog.removeProduct(id));
+        return sendJson(res,200,{item,bootstrap:bootstrap(actor)});
+      }
       if(req.method==='POST'&&pathname.startsWith('/api/catalog/')){auth.require(token,'catalog.manage');const body=await readJson(req);const kind=pathname.slice('/api/catalog/'.length);const method=kind==='categories'?'saveCategory':kind==='suppliers'?'saveSupplier':kind==='warehouses'?'saveWarehouse':kind==='products'?'saveProduct':null;if(!method)return sendJson(res,404,{error:'NOT_FOUND'});const item=catalog[method](body);return sendJson(res,201,{item,bootstrap:bootstrap(auth.session(token).user)});}
       if(req.method==='POST'&&pathname==='/api/stock/movements'){const body=await readJson(req);const permission=body.type==='ADJUSTMENT'?'stock.adjust':body.type==='TRANSFER'?'stock.transfer':'stock.create';const actor=auth.require(token,permission);let result;const payload={...body,userId:actor.id};if(body.type==='ENTRY')result=await stock.entry({...payload,quantity:Number(body.quantity)});else if(body.type==='EXIT')result=await stock.exit({...payload,quantity:Number(body.quantity)});else if(body.type==='ADJUSTMENT')result=await stock.adjust({...payload,newQuantity:Number(body.newQuantity)});else if(body.type==='TRANSFER')result=await stock.transfer({...payload,sourceWarehouseId:body.warehouseId||body.sourceWarehouseId,targetWarehouseId:body.targetWarehouseId,quantity:Number(body.quantity)});else throw new DomainError('INVALID_MOVEMENT_TYPE','unsupported movement type',{type:body.type});return sendJson(res,201,{result,bootstrap:bootstrap(actor)});}
       if(req.method==='POST'&&pathname==='/api/inventories'){const actor=auth.require(token,'inventory.create');const body=await readJson(req);const item=await inventory.start({...body,userId:actor.id});return sendJson(res,201,{item,counts:inventory.listCounts(item.id),bootstrap:bootstrap(actor)});}
