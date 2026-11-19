@@ -29,7 +29,7 @@ export function createMemoryStockRepository(seed = {}) {
   const api = {
     getCategory: (id) => getMap('categories', id), listCategories: () => listMap('categories'), saveCategory: (item) => saveTo(state.categories, item),
     getSupplier: (id) => getMap('suppliers', id), listSuppliers: () => listMap('suppliers'), saveSupplier: (item) => saveTo(state.suppliers, item),
-    getProduct: (id) => getMap('products', id), listProducts: () => listMap('products'), saveProduct: (item) => saveTo(state.products, item),
+    getProduct: (id) => getMap('products', id), listProducts: () => listMap('products'), saveProduct: (item) => saveTo(state.products, item), removeProduct(id) { const old=getMap('products',id); if(!old)return null; state.products.delete(id); for(const key of [...state.balances.keys()])if(key.startsWith(`${id}::`))state.balances.delete(key); return old; },
     getWarehouse: (id) => getMap('warehouses', id), listWarehouses: () => listMap('warehouses'), saveWarehouse: (item) => saveTo(state.warehouses, item),
     getUser: (id) => getMap('users', id), getUserByLogin: (login) => listMap('users').find((u) => u.login === login) ?? null, listUsers: () => listMap('users'), saveUser: (item) => saveTo(state.users, item),
     getCostCenter: (id) => getMap('costCenters', id), listCostCenters: () => listMap('costCenters'), saveCostCenter: (item) => saveTo(state.costCenters, item),
