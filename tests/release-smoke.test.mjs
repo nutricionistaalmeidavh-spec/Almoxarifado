@@ -6,7 +6,7 @@ const read=(p)=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 
 test('release browser smoke covers installed usability path',async()=>{
   const source=await read('scripts/release-smoke.mjs');
-  for(const token of ["from 'playwright'","/api/health","/api/auth/status","#auth-form","#app-shell","#product-form","#movement-form","#metric-products","#metric-units","/api/bootstrap","ALMOX_QA_SKU","verify-only"]) assert.match(source,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  for(const token of ["from 'playwright'","/api/health","/api/auth/status","#auth-form","#app-shell","#product-form","#product-save","#movement-form","#metric-products","#metric-units","/api/bootstrap","ALMOX_QA_SKU","verify-only"]) assert.match(source,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
 
 test('release smoke captures real UI v2 screenshots from installed app',async()=>{
