@@ -10,6 +10,7 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g,(c)=>({'&':'&amp;'
 let token = sessionStorage.getItem('almox-token') || '';
 let authMode = 'login';
 let selectedInventoryId = null;
+let editingProductId = null;
 let latestRevision = null;
 let polling = false;
 let state = {dashboard:{},categories:[],suppliers:[],warehouses:[],products:[],balances:[],movements:[],inventories:[],purchaseRequests:[],purchaseOrders:[],receipts:[],costCenters:[],projects:[],departments:[],reservations:[],lots:[],serials:[],transitTransfers:[],priceHistory:[],users:[],user:null};
@@ -59,7 +60,17 @@ function render(){
   $('#recent-movements').innerHTML=table([['date','Data'],['type','Tipo'],['product','Produto'],['quantity','Qtd.'],['after','Saldo']],movements.slice(0,5));
   $('#movements-table').innerHTML=table([['date','Data'],['type','Tipo'],['product','Produto'],['warehouse','Depósito'],['quantity','Qtd.'],['after','Saldo'],['context','Centro/obra']],movements);
   const totals=new Map(); for(const b of state.balances)totals.set(b.productId,(totals.get(b.productId)||0)+b.quantity);
-  $('#products-table').innerHTML=table([['sku','SKU'],['barcode','Código'],['name','Produto'],['stock','Estoque'],['min','Mín.'],['target','Alvo'],['cost','Custo méd.']],state.products.map((p)=>({sku:p.sku,barcode:p.barcode||'',name:p.name,stock:number.format(totals.get(p.id)||0),min:number.format(p.minStock||0),target:number.format(p.targetStock||0),cost:money.format(p.avgCost??p.unitCost??0)})));
+  const canManageProducts=['ADMIN','ALMOXARIFE'].includes(state.user?.role);
+  $('#products-table').innerHTML=table(
+    [['sku','SKU'],['barcode','Código'],['name','Produto'],['stock','Estoque'],['min','Mín.'],['target','Alvo'],['cost','Custo méd.'],['status','Situação'],['actions','Ações']],
+    state.products.map((p)=>({
+      sku:p.sku,barcode:p.barcode||'',name:p.name,stock:number.format(totals.get(p.id)||0),
+      min:number.format(p.minStock||0),target:number.format(p.targetStock||0),
+      cost:money.format(p.avgCost??p.unitCost??0),
+      status:p.active===false?'Inativo':'Ativo',
+      actions:{html:canManageProducts?`<div class="product-actions" role="group" aria-label="Ações de ${esc(p.name)}"><button class="btn secondary" type="button" data-product-action="edit" data-id="${esc(p.id)}">Editar</button><button class="btn secondary" type="button" data-product-action="toggle" data-id="${esc(p.id)}">${p.active===false?'Reativar':'Desativar'}</button><button class="btn secondary product-delete" type="button" data-product-action="delete" data-id="${esc(p.id)}">Excluir</button></div>`:'—'}
+    }))
+  );
   $('#inventories-table').innerHTML=state.inventories.length?`<table><thead><tr><th>Início</th><th>Depósito</th><th>Status</th><th>Itens</th><th></th></tr></thead><tbody>${state.inventories.map((i)=>`<tr><td>${esc(new Date(i.startedAt).toLocaleString('pt-BR'))}</td><td>${esc(warehouse(i.warehouseId)?.name||i.warehouseId)}</td><td>${esc(i.status)}</td><td>${esc(i.productCount)}</td><td>${i.status==='OPEN'?`<button class="btn secondary open-inventory" data-id="${esc(i.id)}">Abrir</button>`:''}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhum inventário.</div>';
   document.querySelectorAll('.open-inventory').forEach((b)=>b.addEventListener('click',()=>loadInventory(b.dataset.id)));
   $('#purchases-table').innerHTML=table([['request','Solicitação'],['status','Status'],['supplier','Fornecedor'],['total','Total'],['action','Ação']],state.purchaseOrders.map((o)=>({request:o.requestId.slice(0,8),status:o.status,supplier:supplier(o.supplierId)?.name||o.supplierId,total:money.format(o.total||0),action:{html:['ORDERED','PARTIALLY_RECEIVED'].includes(o.status)?`<button class="btn secondary receive-order" data-id="${esc(o.id)}">Conferir recebimento</button>`:''}})));
@@ -81,8 +92,59 @@ async function start(){try{const status=await request('/api/auth/status',{}, {pu
 $('#auth-form').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));try{if(authMode==='bootstrap'){await request('/api/auth/bootstrap',{method:'POST',body:JSON.stringify({password:data.password})},{publicRequest:true});data.login='admin';}const session=await request('/api/auth/login',{method:'POST',body:JSON.stringify({login:data.login,password:data.password})},{publicRequest:true});token=session.token;sessionStorage.setItem('almox-token',token);state.user=session.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch(err){authMessage(err.message,true);}});
 $('#logout').addEventListener('click',async()=>{try{await request('/api/auth/logout',{method:'POST'});}catch{}showAuth('login');});
 
-async function submitCatalog(form,kind){const data=Object.fromEntries(new FormData(form));if(kind==='products'){for(const key of ['minStock','targetStock','unitCost'])data[key]=Number(data[key]||0);}const result=await request(`/api/catalog/${kind}`,{method:'POST',body:JSON.stringify(data)});state=result.bootstrap;render();form.reset();if(kind==='products')form.elements.unit.value='un';flash('Cadastro salvo.');}
+function resetProductEditing(form=$('#product-form')){
+  editingProductId=null;
+  form.reset();
+  form.elements.namedItem('unit').value='un';
+  $('#product-save').textContent='Salvar produto';
+  $('#product-cancel-edit').hidden=true;
+}
+async function submitCatalog(form,kind){
+  const data=Object.fromEntries(new FormData(form));
+  if(kind==='products')for(const key of ['minStock','targetStock','unitCost'])data[key]=Number(data[key]||0);
+  const editing=kind==='products'&&editingProductId;
+  const endpoint=editing?`/api/catalog/products/${encodeURIComponent(editingProductId)}`:`/api/catalog/${kind}`;
+  const result=await request(endpoint,{method:editing?'PATCH':'POST',body:JSON.stringify(data)});
+  state=result.bootstrap;
+  if(kind==='products')resetProductEditing(form);
+  else form.reset();
+  render();
+  flash(editing?'Material atualizado.':'Cadastro salvo.');
+}
 for(const [id,kind] of [['product-form','products'],['category-form','categories'],['supplier-form','suppliers'],['warehouse-form','warehouses']])$(`#${id}`).addEventListener('submit',(e)=>{e.preventDefault();submitCatalog(e.currentTarget,kind).catch((err)=>flash(err.message,true));});
+$('#product-cancel-edit').addEventListener('click',()=>resetProductEditing());
+$('#products-table').addEventListener('click',async(event)=>{
+  const button=event.target.closest('button[data-product-action]');
+  if(!button||!event.currentTarget.contains(button))return;
+  const material=state.products.find(item=>item.id===button.dataset.id);
+  if(!material)return flash('Material não encontrado.',true);
+  const action=button.dataset.productAction;
+  if(action==='edit'){
+    editingProductId=material.id;
+    const form=$('#product-form');
+    for(const key of ['sku','barcode','name','unit','minStock','targetStock','unitCost','categoryId','supplierId']){
+      const field=form.elements.namedItem(key);
+      if(field)field.value=material[key]??'';
+    }
+    $('#product-save').textContent='Salvar alterações';
+    $('#product-cancel-edit').hidden=false;
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+    form.elements.namedItem('name').focus({preventScroll:true});
+    return;
+  }
+  const endpoint=`/api/catalog/products/${encodeURIComponent(material.id)}`;
+  if(action==='delete'&&!window.confirm(`Excluir permanentemente "${material.name}"? A exclusão somente será permitida sem saldo, histórico ou vínculos. Caso contrário, utilize Desativar.`))return;
+  button.disabled=true;
+  try{
+    const result=await request(endpoint,action==='delete'?{method:'DELETE'}:{method:'PATCH',body:JSON.stringify({active:material.active===false})});
+    state=result.bootstrap;
+    if(editingProductId===material.id)resetProductEditing();
+    render();
+    flash(action==='delete'?'Material excluído.':material.active===false?'Material reativado.':'Material desativado.');
+  }catch(error){flash(error.message,true);}
+  finally{button.disabled=false;}
+});
+
 
 $('#movement-form').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));for(const key of ['costCenterId','projectId','departmentId'])if(!data[key])delete data[key];const payload={...data};if(data.type==='ADJUSTMENT')payload.newQuantity=Number(data.newQuantity);else payload.quantity=Number(data.quantity);try{const result=await request('/api/stock/movements',{method:'POST',body:JSON.stringify(payload)});state=result.bootstrap;render();flash('Movimentação registrada.');}catch(err){flash(err.message,true);}});
 $('#inventory-start-form').addEventListener('submit',async(e)=>{e.preventDefault();try{const body=Object.fromEntries(new FormData(e.currentTarget));const result=await request('/api/inventories',{method:'POST',body:JSON.stringify(body)});state=result.bootstrap;render();await loadInventory(result.item.id);}catch(err){flash(err.message,true);}});
