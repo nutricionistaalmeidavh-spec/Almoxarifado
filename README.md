@@ -11,6 +11,10 @@ O produto é distribuído **sem sistema de licença**, chave, ativação, limite
 ### 01–09 — Núcleo operacional
 Base Desktop/PWA, utilidades ArtiSys, modelagem, motor de estoque, inventário, interface, persistência LAN, código de barras, relatórios, impressão e etiquetas.
 
+### Gestão de materiais — edição e exclusão segura
+
+Em **Cadastros → Produtos**, cada material apresenta as ações **Editar**, **Desativar/Reativar** e **Excluir**. A edição reaproveita o formulário e preserva o identificador e o histórico; a desativação impede novos usos operacionais sem apagar registros. A exclusão física exige confirmação e é recusada quando existem saldos, movimentações, contagens, compras, documentos, kits ou outros vínculos, inclusive históricos. Nesse caso, utilize **Desativar**. As operações exigem a permissão `catalog.manage` e funcionam no Desktop/PWA local, sem serviços pagos.
+
 ### 10 — Autenticação e permissões
 Primeiro acesso configura o administrador local; senhas com `scrypt` + salt; sessões; perfis `ADMIN`, `ALMOXARIFE`, `COMPRAS`, `GESTOR`, `LEITURA`; autorização server-side e auditoria.
 
