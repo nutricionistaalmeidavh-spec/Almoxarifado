@@ -23,7 +23,8 @@ async function request(path, options = {}, { publicRequest = false } = {}) {
   const type = response.headers.get('content-type') || '';
   const body = type.includes('application/json') ? await response.json() : await response.text();
   if (!response.ok) {
-    if (response.status === 401 && !publicRequest) showAuth('login');
+    if (response.status === 423 && !publicRequest) showLicense('Licença inativa ou expirada. Solicite a liberação à ArtiSys.');
+    else if (response.status === 401 && !publicRequest) showAuth('login');
     throw new Error(body?.message || body?.error || `HTTP ${response.status}`);
   }
   return body;
@@ -86,8 +87,11 @@ function render(){
 }
 
 async function reload(){state=await request('/api/bootstrap');latestRevision=state.revision;$('#connection-status').textContent='Servidor local conectado';render();}
-function showAuth(mode='login'){authMode=mode;token='';sessionStorage.removeItem('almox-token');$('#app-shell').hidden=true;$('#auth-screen').hidden=false;$('#login-field').hidden=mode==='bootstrap';$('#auth-help').textContent=mode==='bootstrap'?'Primeiro acesso: defina a senha do administrador local.':'Entrar no sistema local';}
-async function start(){try{const status=await request('/api/auth/status',{}, {publicRequest:true});if(status.needsBootstrap)return showAuth('bootstrap');if(!token)return showAuth('login');const me=await request('/api/auth/me');state.user=me.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch{showAuth('login');}}
+function showLicense(message=''){token='';sessionStorage.removeItem('almox-token');$('#app-shell').hidden=true;$('#auth-screen').hidden=true;$('#license-screen').hidden=false;$('#license-message').textContent=message;}
+function showAuth(mode='login'){$('#license-screen').hidden=true;authMode=mode;token='';sessionStorage.removeItem('almox-token');$('#app-shell').hidden=true;$('#auth-screen').hidden=false;$('#login-field').hidden=mode==='bootstrap';$('#auth-help').textContent=mode==='bootstrap'?'Primeiro acesso: defina a senha do administrador local.':'Entrar no sistema local';}
+async function start(){try{const entitlement=await request('/api/license/status',{}, {publicRequest:true});if(entitlement.required&&!entitlement.active)return showLicense();$('#license-screen').hidden=true;const status=await request('/api/auth/status',{}, {publicRequest:true});if(status.needsBootstrap)return showAuth('bootstrap');if(!token)return showAuth('login');const me=await request('/api/auth/me');state.user=me.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch(error){showLicense('Não foi possível verificar a licença local: '+error.message);}}
+
+$('#license-form').addEventListener('submit',async(event)=>{event.preventDefault();const form=event.currentTarget;const body=Object.fromEntries(new FormData(form));const button=form.querySelector('button[type="submit"]');button.disabled=true;$('#license-message').textContent='Validando código...';try{await request('/api/license/activate',{method:'POST',body:JSON.stringify(body)},{publicRequest:true});await start();}catch(error){$('#license-message').textContent=error.message;}finally{button.disabled=false;}});
 
 $('#auth-form').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));try{if(authMode==='bootstrap'){await request('/api/auth/bootstrap',{method:'POST',body:JSON.stringify({password:data.password})},{publicRequest:true});data.login='admin';}const session=await request('/api/auth/login',{method:'POST',body:JSON.stringify({login:data.login,password:data.password})},{publicRequest:true});token=session.token;sessionStorage.setItem('almox-token',token);state.user=session.user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;await reload();}catch(err){authMessage(err.message,true);}});
 $('#logout').addEventListener('click',async()=>{try{await request('/api/auth/logout',{method:'POST'});}catch{}showAuth('login');});
