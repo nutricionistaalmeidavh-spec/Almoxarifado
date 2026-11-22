@@ -5,6 +5,7 @@ import { createSqliteStockRepository } from '../domain/stock/sqlite-repository.m
 import { createBackupService } from '../domain/backup/backup-service.mjs';
 import { createLocalApi } from './local-api.mjs';
 import { createWebServer } from './web-server.mjs';
+import { createAlmoxarifadoCommercialLicense } from './commercial-license.mjs';
 import { createHardwareAdapter } from './hardware-adapter.mjs';
 import { createOcrAdapter } from './ocr-adapter.mjs';
 
@@ -15,7 +16,7 @@ async function optionalImport(specifier){try{const mod=await import(specifier);r
 async function loadHardwareAdapter(){const [serialApi,printingApi]=await Promise.all([optionalImport('@artisys/serialport'),optionalImport('@artisys/printing')]);return createHardwareAdapter({serialApi,printingApi});}
 function rotateLog(file,maxBytes=1024*1024){try{if(statSync(file).size<maxBytes)return;const previous=`${file}.1`;try{renameSync(file,previous);}catch{} }catch{}}
 
-export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),host='0.0.0.0',port=4173,dependencies={}}={}){
+export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),host='0.0.0.0',port=4173,commercialActivation=false,dependencies={}}={}){
   if(typeof dataDir!=='string'||!dataDir.trim())throw new TypeError('dataDir is required');
   const data=path.resolve(dataDir);
   const paths={data,database:path.join(data,'almoxarifado.sqlite'),legacyDatabase:path.join(data,'almoxarifado.json'),documents:path.join(data,'documents'),backups:path.join(data,'backups'),logs:path.join(data,'logs'),settings:path.join(data,'settings.json')};
@@ -26,6 +27,7 @@ export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),
   const desktopApi=dependencies.desktopApi??{createDesktopShellManifest};
   if(typeof desktopApi.createDesktopShellManifest!=='function')throw new TypeError('desktopApi.createDesktopShellManifest is required');
   const manifest=desktopApi.createDesktopShellManifest({appId:'br.com.artisys.almoxarifado',userDataDir:paths.data,logDir:paths.logs,updateChannel:'stable',deepLinkSchemes:['artisys-almoxarifado'],telemetry:false});
+  const licenseControl=dependencies.licenseControl??createAlmoxarifadoCommercialLicense({required:commercialActivation===true,root:data,endpoint:dependencies.licenseEndpoint});
   let server=null,stopAutomaticBackup=null,repository=null;
   const logFile=path.join(paths.logs,'almoxarifado.log');
   const log=(event,details={})=>{rotateLog(logFile);appendFileSync(logFile,`${JSON.stringify({at:new Date().toISOString(),event,...details})}\n`,'utf8');};
@@ -39,7 +41,7 @@ export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),
     if(currentSettings.backup.enabled!==false)stopAutomaticBackup=backup.startAutomatic({intervalMs:Number(currentSettings.backup.intervalMs??86_400_000)});
     const hardwareAdapter=dependencies.hardwareAdapter??await loadHardwareAdapter();
     const ocrAdapter=dependencies.ocrAdapter??createOcrAdapter({providers:dependencies.ocrProviders??{}});
-    const api=(dependencies.createLocalApi??createLocalApi)({repository,backupDir:paths.backups,documentDir:paths.documents,ocrAdapter,hardwareAdapter});
+    const api=(dependencies.createLocalApi??createLocalApi)({repository,backupDir:paths.backups,documentDir:paths.documents,ocrAdapter,hardwareAdapter,licenseControl});
     server=(dependencies.createWebServer??createWebServer)({host:currentSettings.host,port:currentSettings.port,apiHandler:api});
     try{await server.start();const current=address();log('runtime.started',{host:current?.address??currentSettings.host,port:current?.port??currentSettings.port,database:'sqlite'});return current;}
     catch(error){stopAutomaticBackup?.();stopAutomaticBackup=null;repository?.close?.();repository=null;server=null;log('runtime.start_failed',{code:error?.code??'ERROR',message:String(error?.message??error)});throw error;}
@@ -47,5 +49,5 @@ export function createAlmoxarifadoDesktopRuntime({dataDir=path.resolve('.data'),
   async function stop(){if(!server){repository?.close?.();repository=null;return;}const current=server;server=null;stopAutomaticBackup?.();stopAutomaticBackup=null;await current.stop();repository?.close?.();repository=null;log('runtime.stopped');}
   function saveSettings(patch={}){currentSettings=normalizeSettings({...currentSettings,...patch,backup:{...currentSettings.backup,...(patch.backup??{})},hardware:{...currentSettings.hardware,...(patch.hardware??{})}},defaults);atomicJson(paths.settings,currentSettings);log('settings.saved');return{...currentSettings,restartRequired:Boolean(server)};}
 
-  return{manifest,paths,get settings(){return structuredClone(currentSettings);},start,stop,address,saveSettings,get repository(){return repository;}};
+  return{manifest,paths,licenseControl,get settings(){return structuredClone(currentSettings);},start,stop,address,saveSettings,get repository(){return repository;}};
 }
