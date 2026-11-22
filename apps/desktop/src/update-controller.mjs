@@ -13,8 +13,8 @@ export function readUpdateFeedUrl({app,env=process.env}={}){
   return DEFAULT_UPDATE_FEED_URL;
 }
 
-export async function promptForDesktopUpdate({currentVersion,feedUrl,destinationDir,app,window,dialog,shell,fetchImpl=fetch}={}){
-  const update=await checkForUpdate({currentVersion,feedUrl,fetchImpl});
+export async function promptForDesktopUpdate({currentVersion,feedUrl,destinationDir,commercialActivation=false,app,window,dialog,shell,fetchImpl=fetch}={}){
+  const update=await checkForUpdate({currentVersion,feedUrl,commercialActivation,fetchImpl});
   if(update.status!=='available'||window.isDestroyed?.())return update.status;
   const choice=await dialog.showMessageBox(window,{
     type:'info',title:'Atualização disponível — ArtiSys Almoxarifado',
@@ -25,7 +25,7 @@ export async function promptForDesktopUpdate({currentVersion,feedUrl,destination
   if(choice.response!==0)return 'deferred';
   try{
     window.setProgressBar?.(2); // Indeterminate download indicator; the UI remains usable.
-    const installer=await downloadVerifiedInstaller(update,{destinationDir,fetchImpl});
+    const installer=await downloadVerifiedInstaller(update,{destinationDir,commercialActivation,fetchImpl});
     if(window.isDestroyed?.())return 'window-closed';
     const error=await shell.openPath(installer);
     if(error)throw Error(error);

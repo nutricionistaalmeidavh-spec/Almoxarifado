@@ -1,0 +1,55 @@
+name: Almoxarifado Commercial Installer QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/**'
+      - 'src/platform/**'
+      - 'scripts/build-commercial.mjs'
+      - 'package.json'
+      - 'tests/commercial-license*.test.mjs'
+      - 'tests/update-editions.test.mjs'
+      - '.github/workflows/commercial-installer-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  commercial-windows:
+    name: Windows - commercial packaging (QA only, no release)
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare lockfile for checked out source
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install dependencies
+        run: npm ci
+      - name: Test and security
+        run: |
+          npm run check
+          npm run security
+      - name: Build commercial installer
+        run: npm run build:win:commercial
+      - name: Verify packaging and restore of free source marker
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $file = "dist/ArtiSys-Almoxarifado-Setup-$($pkg.version)-Commercial.exe"
+          if (-not (Test-Path $file)) { throw "Commercial installer not found: $file" }
+          if ((Get-Item $file).Length -lt 1048576) { throw "Installer unexpectedly small" }
+          $edition = Get-Content apps/desktop/src/edition.json | ConvertFrom-Json
+          if ($edition.commercialActivation -ne $false) { throw "Free manifest was not restored" }
+          Get-FileHash $file -Algorithm SHA256 | Format-List
+      - name: Upload commercial installer for QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: almoxarifado-commercial-windows-qa
+          path: dist/ArtiSys-Almoxarifado-Setup-*-Commercial.exe
+          if-no-files-found: error
+          retention-days: 14

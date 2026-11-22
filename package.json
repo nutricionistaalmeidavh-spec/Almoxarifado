@@ -20,7 +20,8 @@
     "build:win": "npm run assets:vendor && electron-builder --win nsis --x64 --publish never",
     "smoke:release": "node scripts/release-smoke.mjs",
     "assets:vendor": "node scripts/copy-open-source-assets.mjs",
-    "postinstall": "node scripts/copy-open-source-assets.mjs"
+    "postinstall": "node scripts/copy-open-source-assets.mjs",
+    "build:win:commercial": "node scripts/build-commercial.mjs"
   },
   "dependencies": {
     "@artisys/desktop-shell": "file:vendor/release-modules/artisys-desktop-shell",

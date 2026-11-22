@@ -22,7 +22,7 @@ test('desktop requests consent, verifies installer and exits after opening setup
   const dir=await mkdtemp(path.join(os.tmpdir(),'almox-controller-'));
   try{
     const bytes=Buffer.from('installer');
-    const payload={version:'1.0.1',size:bytes.length,downloadUrl:'https://example.org/Setup.exe',sha256:createHash('sha256').update(bytes).digest('hex')};
+    const payload={version:'1.0.1',size:bytes.length,downloadUrl:'https://example.org/ArtiSys-Almoxarifado-Setup-1.0.1.exe',sha256:createHash('sha256').update(bytes).digest('hex')};
     const fetchImpl=async url=>url.endsWith('.json')?new Response(JSON.stringify(payload)):new Response(bytes);
     const actions=[];
     const app={quit:()=>actions.push('quit')};
@@ -38,7 +38,7 @@ test('desktop requests consent, verifies installer and exits after opening setup
 
 test('choosing later avoids downloading or exiting',async()=>{
   const bytes=Buffer.from('installer');let requests=0,quits=0;
-  const payload={version:'1.0.1',size:bytes.length,downloadUrl:'https://example.org/Setup.exe',sha256:createHash('sha256').update(bytes).digest('hex')};
+  const payload={version:'1.0.1',size:bytes.length,downloadUrl:'https://example.org/ArtiSys-Almoxarifado-Setup-1.0.1.exe',sha256:createHash('sha256').update(bytes).digest('hex')};
   const result=await promptForDesktopUpdate({currentVersion:'1.0.0',feedUrl:'https://example.org/latest.json',destinationDir:os.tmpdir(),app:{quit:()=>quits++},window:{isDestroyed:()=>false},dialog:{showMessageBox:async()=>({response:1})},shell:{openPath:async()=>''},fetchImpl:async()=>{requests++;return new Response(JSON.stringify(payload));}});
   assert.equal(result,'deferred');
   assert.equal(requests,1);

@@ -23,9 +23,10 @@ function tokenFrom(req){const value=req.headers.authorization||'';if(value.start
 function isLoopback(req){const address=String(req.socket?.remoteAddress||'');return address==='127.0.0.1'||address==='::1'||address==='::ffff:127.0.0.1';}
 function statusFor(error){if(error.code==='PRODUCT_IN_USE')return 409;if(error.code==='AUTH_REQUIRED'||error.code==='INVALID_CREDENTIALS')return 401;if(error.code==='FORBIDDEN')return 403;if(error.code==='AUTH_THROTTLED')return 429;if(error.code==='PAYLOAD_TOO_LARGE'||error.code==='DOCUMENT_TOO_LARGE')return 413;if(error.code==='OCR_UNAVAILABLE'||error.code==='HARDWARE_UNAVAILABLE')return 503;if(/NOT_FOUND$/.test(error.code))return 404;return 400;}
 
-export function createLocalApi({repository,publish=async()=>{},backupDir=path.resolve('.data/backups'),documentDir=path.resolve('.data/documents'),ocrAdapter=null,hardwareAdapter=null}={}){
+export function createLocalApi({repository,publish=async()=>{},backupDir=path.resolve('.data/backups'),documentDir=path.resolve('.data/documents'),ocrAdapter=null,hardwareAdapter=null,licenseControl=null}={}){
   if(!repository)throw new TypeError('repository is required');
   const catalog=createCatalogService({repository});const stock=createStockService({repository,publish});const inventory=createInventoryService({repository,publish});const auth=createAuthService({repository});const management=createManagementService({repository});const costs=createCostService({repository});const purchasing=createPurchasingService({repository,stock,recordCost:(input)=>costs.recordReceipt(input)});const advanced=createAdvancedStockService({repository,stock});const wms=createWmsService({repository,stock});const backup=createBackupService({repository,backupDir});const extensions=createLocalApiExtensions({repository,auth,documentDir,ocrAdapter,hardwareAdapter});
+  const license=licenseControl??{required:false,status:async()=>({required:false,active:true,offline:false})};
   const publicUsers=()=>repository.listUsers().map(auth.publicUser);
   const bootstrap=(user)=>({revision:repository.revision?.()??null,user:auth.publicUser(user),dashboard:buildDashboard(repository),categories:repository.listCategories(),suppliers:repository.listSuppliers(),warehouses:repository.listWarehouses(),products:repository.listProducts(),balances:repository.listBalances(),movements:repository.listMovements().slice().reverse(),inventories:repository.listInventories().slice().reverse(),costCenters:repository.listCostCenters(),projects:repository.listProjects(),departments:repository.listDepartments(),purchaseRequests:repository.listPurchaseRequests().slice().reverse(),purchaseOrders:repository.listPurchaseOrders().slice().reverse(),receipts:repository.listReceipts().slice().reverse(),reservations:repository.listReservations().slice().reverse(),lots:repository.listLots(),serials:repository.listSerials(),transitTransfers:repository.listTransitTransfers().slice().reverse(),priceHistory:repository.listPriceHistory().slice().reverse(),locations:repository.listLocations?.()??[],stockPositions:repository.listStockPositions?.()??[],cycleCounts:(repository.listCycleCounts?.()??[]).slice().reverse(),users:user?.role==='ADMIN'?publicUsers():[]});
 
@@ -33,6 +34,18 @@ export function createLocalApi({repository,publish=async()=>{},backupDir=path.re
     try{
       const url=new URL(req.url||'/','http://local');const pathname=url.pathname;
       if(req.method==='GET'&&pathname==='/api/health')return sendJson(res,200,{status:'ok',mode:'local-lan'});
+      if(req.method==='GET'&&pathname==='/api/license/status')return sendJson(res,200,await license.status());
+      if(req.method==='POST'&&pathname==='/api/license/activate'){
+        if(!isLoopback(req))return sendJson(res,403,{error:'FORBIDDEN',message:'Ative no computador principal.'});
+        if(!license.required)return sendJson(res,404,{error:'NOT_FOUND'});
+        const body=await readJson(req);
+        try{return sendJson(res,200,await license.activate({email:body.email,code:body.code}));}
+        catch(error){return sendJson(res,error.status>=400&&error.status<500?error.status:503,{error:'ACTIVATION_FAILED',message:String(error.message||'Falha ao ativar')});}
+      }
+      if(license.required){
+        const current=await license.status();
+        if(!current.active)return sendJson(res,423,{error:'LICENSE_REQUIRED',message:'Ative ArtiSys Almoxarifado no computador principal.',expiresAt:current.expiresAt??null});
+      }
       if(req.method==='GET'&&pathname==='/api/auth/status')return sendJson(res,200,{needsBootstrap:auth.needsBootstrap()});
       if(req.method==='POST'&&pathname==='/api/auth/bootstrap'){if(!isLoopback(req))throw new DomainError('FORBIDDEN','initial administrator setup must be completed on the host PC');const body=await readJson(req);const user=auth.bootstrapAdmin(body.password);return sendJson(res,201,{user});}
       if(req.method==='POST'&&pathname==='/api/auth/login'){const body=await readJson(req);return sendJson(res,200,auth.authenticate(body.login,body.password));}
