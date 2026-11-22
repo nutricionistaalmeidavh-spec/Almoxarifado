@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog, shell } from 'electron';
+import edition from './edition.json' with { type: 'json' };
 import { promptForDesktopUpdate, readUpdateFeedUrl } from './update-controller.mjs';
 import { createAlmoxarifadoDesktopRuntime } from '../../../src/platform/desktop-runtime.mjs';
 
@@ -9,7 +10,7 @@ let shuttingDown=false;
 
 async function boot(){
   const dataDir=path.join(app.getPath('userData'),'data');
-  runtime=createAlmoxarifadoDesktopRuntime({dataDir,host:'0.0.0.0',port:4173});
+  runtime=createAlmoxarifadoDesktopRuntime({dataDir,host:'0.0.0.0',port:4173,commercialActivation:edition.commercialActivation===true});
   const address=await runtime.start();
   mainWindow=new BrowserWindow({width:1280,height:820,minWidth:960,minHeight:640,show:false,autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
   mainWindow.webContents.setWindowOpenHandler(()=>({action:'deny'}));
