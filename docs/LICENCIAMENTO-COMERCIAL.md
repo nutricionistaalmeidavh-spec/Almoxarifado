@@ -30,4 +30,6 @@ Selecione **ArtiSys Almoxarifado**, e-mail do cliente e data de validade (em bra
 4. Testar manualmente em Windows novo: primeira ativação, segundo acesso offline, código inválido/expirado, expiração da licença, suspensão e reinstalação. Nunca enviar um instalador sem QA em Windows.
 5. Central Cloudflare: executar testes do `PDV-ARTISYS`; deploy somente pelo Worker já vinculado à conta correta, com D1 e secrets existentes preservados.
 
-**Atualizações seguras por edição:** o atualizador da versão comercial só aceita artefatos `-Commercial.exe` e manifesto `release-manifest-commercial.json` quando necessário; se a release publicar apenas a edição livre, não oferece atualização comercial. A edição livre só aceita o instalador livre. Nunca cruzar as edições por atualização automática.\n**Nota:** senha de administrador local e arquivos de estoque/SQLite não fazem parte do serviço de licenças.
+**Atualizações seguras por edição:** o atualizador da versão comercial só aceita artefatos `-Commercial.exe` e manifesto `release-manifest-commercial.json` quando necessário; se a release publicar apenas a edição livre, não oferece atualização comercial. A edição livre só aceita o instalador livre. Nunca cruzar as edições por atualização automática.
+
+**Nota:** senha de administrador local e arquivos de estoque/SQLite não fazem parte do serviço de licenças.
