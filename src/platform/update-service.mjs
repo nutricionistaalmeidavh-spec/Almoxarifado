@@ -28,17 +28,19 @@ function httpsUrl(value,suffix){
     return !suffix||url.pathname.toLowerCase().endsWith(suffix);
   }catch{return false;}
 }
-function validUpdate(candidate){
+function installerName(version,commercialActivation=false){return `ArtiSys-Almoxarifado-Setup-${version}${commercialActivation?'-Commercial':''}.exe`;}
+function validUpdate(candidate,{commercialActivation=false}={}){
   if(!candidate||typeof candidate!=='object'||!VERSION.test(String(candidate.version)))throw Error('Invalid update version');
   if(!httpsUrl(candidate.downloadUrl,'.exe'))throw Error('Invalid HTTPS installer URL');
+  if(new URL(candidate.downloadUrl).pathname.split('/').at(-1)!==installerName(String(candidate.version).replace(/^v/,''),commercialActivation))throw Error('Installer edition mismatch');
   if(!SHA256.test(String(candidate.sha256)))throw Error('Missing SHA-256 installer digest');
   const size=Number(candidate.size);
   if(!Number.isSafeInteger(size)||size<1||size>MAX_INSTALLER_BYTES)throw Error('Invalid installer size');
-  return {version:String(candidate.version).replace(/^v/,''),downloadUrl:candidate.downloadUrl,sha256:candidate.sha256.toLowerCase(),size,notes:String(candidate.notes||'').slice(0,500)};
+  return {version:String(candidate.version).replace(/^v/,''),downloadUrl:candidate.downloadUrl,sha256:candidate.sha256.toLowerCase(),size,notes:String(candidate.notes||'').slice(0,500),commercialActivation};
 }
-function githubAsset(release){
+function githubAsset(release,{commercialActivation=false}={}){
   const version=String(release.tag_name||'').replace(/^v/,'');
-  const asset=release.assets.find(a=>a.name===`ArtiSys-Almoxarifado-Setup-${version}.exe`);
+  const asset=release.assets.find(a=>a.name===installerName(version,commercialActivation));
   if(!asset)throw Error('No Windows installer in this release');
   const digest=String(asset.digest||'').match(/^sha256:([a-f0-9]{64})$/i)?.[1];
   return {asset,digest};
@@ -49,7 +51,7 @@ async function fetchJson(url,fetchImpl,signal){
   if(!response.ok||!httpsUrl(response.url||url))throw Error('Update feed unavailable');
   return response.json();
 }
-export async function checkForUpdate({currentVersion,feedUrl=DEFAULT_UPDATE_FEED_URL,fetchImpl=fetch,timeoutMs=8000}={}){
+export async function checkForUpdate({currentVersion,feedUrl=DEFAULT_UPDATE_FEED_URL,commercialActivation=false,fetchImpl=fetch,timeoutMs=8000}={}){
   try{
     if(!VERSION.test(String(currentVersion)))return {status:'unavailable'};
     const signal=AbortSignal.timeout(timeoutMs);
@@ -57,10 +59,10 @@ export async function checkForUpdate({currentVersion,feedUrl=DEFAULT_UPDATE_FEED
     let candidate;
     if(Array.isArray(source?.assets)&&source?.tag_name){
       if(source.draft||source.prerelease)return {status:'current'};
-      const {asset,digest}=githubAsset(source);
+      const {asset,digest}=githubAsset(source,{commercialActivation});
       let sha256=digest;
       if(!sha256){
-        const manifestAsset=source.assets.find(a=>a.name==='release-manifest.json');
+        const manifestAsset=source.assets.find(a=>a.name===(commercialActivation?'release-manifest-commercial.json':'release-manifest.json'));
         if(!manifestAsset)throw Error('Release is missing SHA-256');
         const manifest=await fetchJson(manifestAsset.browser_download_url,fetchImpl,signal);
         if(manifest.artifact!==asset.name||manifest.version!==String(source.tag_name).replace(/^v/,''))throw Error('Release integrity metadata mismatch');
@@ -68,16 +70,17 @@ export async function checkForUpdate({currentVersion,feedUrl=DEFAULT_UPDATE_FEED
       }
       candidate={version:source.tag_name,downloadUrl:asset.browser_download_url,sha256,size:asset.size,notes:source.body};
     }else candidate=source;
-    const update=validUpdate(candidate);
+    const update=validUpdate(candidate,{commercialActivation});
     if(compareVersions(update.version,currentVersion)<=0)return {status:'current',version:update.version};
     return {status:'available',...update};
   }catch{return {status:'unavailable'};}
 }
-export async function downloadVerifiedInstaller(update,{destinationDir,fetchImpl=fetch,timeoutMs=180_000}={}){
-  const candidate=validUpdate(update);
+export async function downloadVerifiedInstaller(update,{destinationDir,commercialActivation=Boolean(update?.commercialActivation),fetchImpl=fetch,timeoutMs=180_000}={}){
+  if(Boolean(update?.commercialActivation)!==commercialActivation)throw Error('Installer edition incompatible with installed edition');
+  const candidate=validUpdate(update,{commercialActivation});
   if(!destinationDir)throw new TypeError('destinationDir is required');
   await mkdir(destinationDir,{recursive:true});
-  const filename=`ArtiSys-Almoxarifado-Setup-${candidate.version}.exe`;
+  const filename=installerName(candidate.version,commercialActivation);
   const target=path.join(destinationDir,filename);
   const partial=`${target}.${process.pid}.${Date.now()}.part`;
   let total=0;
