@@ -9,6 +9,17 @@
   <title>ArtiSys Almoxarifado</title>
 </head>
 <body>
+  <div id="license-screen" class="auth-screen" hidden>
+    <form id="license-form" class="auth-card">
+      <h1>Liberar ArtiSys Almoxarifado</h1>
+      <p class="muted">Informe o e-mail da compra e o código de ativação fornecido pela ArtiSys. A liberação deve ser feita no computador principal.</p>
+      <div class="field"><label for="license-email">E-mail da licença</label><input id="license-email" name="email" type="email" required autocomplete="email"></div>
+      <div class="field"><label for="license-code">Código de 6 dígitos</label><input id="license-code" name="code" type="text" pattern="[0-9]{6}" minlength="6" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required></div>
+      <button type="submit" class="btn">Ativar sistema</button>
+      <div id="license-message" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+
   <div id="auth-screen" class="auth-screen">
     <form id="auth-form" class="auth-card">
       <h1>ArtiSys Almoxarifado</h1>
