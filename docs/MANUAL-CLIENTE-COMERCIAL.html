@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual do Usuário — ArtiSys Almoxarifado</title>
+<style>
+:root{--ink:#172034;--muted:#596578;--line:#d9e1eb;--navy:#14233f;--blue:#2559b0}
+*{box-sizing:border-box}html{font-size:13px}body{font-family:Arial,Helvetica,sans-serif;color:var(--ink);line-height:1.58;margin:0;background:#fff}
+main{max-width:840px;margin:auto;padding:45px 55px 55px}
+.cover{padding:58px 0 45px;border-bottom:2px solid var(--navy);margin-bottom:30px}
+.brand{font-size:14px;font-weight:800;letter-spacing:.14em;color:var(--blue)}
+.overline{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:45px}
+h1{font-size:39px;line-height:1.16;letter-spacing:-1px;color:var(--navy);margin:8px 0 12px}
+.subtitle{font-size:16px;color:var(--muted);max-width:500px}
+.meta{font-size:11px;color:var(--muted);margin-top:32px}
+h2{font-size:20px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:7px;margin:35px 0 13px;break-after:avoid}
+h3{font-size:14px;color:var(--blue);margin:19px 0 7px;break-after:avoid}
+p{margin:9px 0}ol,ul{margin:8px 0 14px;padding-left:22px}li{margin:5px 0}strong{color:#192944}
+.step{background:#f1f5fb;border:1px solid #dce7f4;padding:13px 16px;border-radius:7px;margin:16px 0;break-inside:avoid}
+.note{border-left:3px solid #2559b0;padding:9px 14px;background:#f5f8fc;margin:14px 0;break-inside:avoid}
+.warn{border-left:3px solid #b87726;padding:9px 14px;background:#fff9ed;margin:14px 0;break-inside:avoid}
+code{font-size:12px;background:#edf2f8;padding:2px 4px;border-radius:3px;word-break:break-word}
+small{color:var(--muted)}a{color:var(--blue);text-decoration:none;word-break:break-word}
+table{border-collapse:collapse;width:100%;font-size:12px;margin:12px 0 20px}td,th{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:#eff4fa}
+.footer{border-top:1px solid var(--line);color:var(--muted);margin-top:38px;padding-top:12px;font-size:11px}
+@media print{main{padding:0;max-width:none}.cover{padding-top:35px}h2{break-after:avoid}li{break-inside:avoid}a{color:#224f91}}
+@media(max-width:600px){main{padding:22px}.cover{padding:25px 0}h1{font-size:30px}}
+</style></head>
+<body><main>
+<header class="cover">
+<div class="brand">ARTISYS</div>
+<div class="overline">Documentação oficial para clientes</div>
+<h1>Manual do Usuário<br>Almoxarifado</h1>
+<p class="subtitle">Instalação, ativação, configuração inicial e operação diária do sistema de estoque e materiais.</p>
+<div class="meta">Edição comercial Desktop • Windows 10/11 (64 bits) • Novembro de 2026</div>
+</header>
+
+<h2>1. Comece por aqui</h2>
+<p>O ArtiSys Almoxarifado funciona no <strong>computador principal da empresa</strong> e permite que outros dispositivos conectados à mesma rede local usem a interface pelo navegador. Os dados de estoque permanecem salvos no computador principal.</p>
+<div class="step"><strong>Você precisa de:</strong><ul><li>Um PC com Windows 10 ou 11, 64 bits.</li><li>O link de download do instalador comercial enviado por e-mail.</li><li>O e-mail da compra e o código de ativação de seis dígitos, também enviados por e-mail.</li><li>Rede local para uso por celular, tablet ou outros computadores (opcional).</li></ul></div>
+<div class="warn"><strong>Importante:</strong> instale o sistema no computador que será o servidor principal. Esse computador precisa permanecer ligado para que os dispositivos da rede acessem os dados.</div>
+
+<h2>2. Instalação e ativação</h2>
+<ol>
+<li>No e-mail de boas-vindas, clique em <strong>Download direto do instalador</strong> e salve o arquivo <code>ArtiSys-Almoxarifado-Setup-...-Commercial.exe</code>.</li>
+<li>Execute o instalador, conclua as etapas no Windows e abra <strong>ArtiSys Almoxarifado</strong> pelo atalho.</li>
+<li>Na tela <strong>Liberar ArtiSys Almoxarifado</strong>, informe exatamente o e-mail vinculado à compra e o <strong>código de seis dígitos</strong>.</li>
+<li>Clique em <strong>Ativar sistema</strong>. A primeira ativação requer conexão à internet.</li>
+<li>Quando solicitado, crie a senha do administrador local, com no mínimo dez caracteres.</li>
+<li>Depois da configuração inicial, entre com o usuário <code>admin</code> e a senha cadastrada.</li>
+</ol>
+<div class="note"><strong>Validade do código:</strong> o código é de uso único e expira 48 horas após sua emissão. Isso <strong>não</strong> significa que a licença vence em 48 horas. Se o código expirar, solicite a reativação à ArtiSys.</div>
+<p>O acesso diário usa uma conta local. A senha criada no sistema é diferente do código de ativação e não é enviada por e-mail.</p>
+
+<h2>3. Configuração inicial recomendada</h2>
+<ol>
+<li>Abra <strong>Cadastros</strong> e registre suas categorias de materiais.</li>
+<li>Cadastre os <strong>fornecedores</strong> e <strong>depósitos</strong> utilizados pela empresa.</li>
+<li>Adicione os <strong>produtos</strong> informando nome, SKU/código, unidade (un, kg, m etc.), custo, estoque mínimo e, se houver, código de barras.</li>
+<li>Em <strong>Configurações</strong>, crie os usuários da equipe e atribua permissões adequadas a cada função.</li>
+<li>Registre a posição inicial do estoque por meio de entradas ou ajustes devidamente identificados.</li>
+<li>Crie o primeiro <strong>backup</strong> após terminar o cadastro inicial.</li>
+</ol>
+<div class="note">Evite usar uma única senha compartilhada por todos. O sistema oferece diferentes perfis, incluindo administrador, almoxarife, compras, gestor e consulta.</div>
+
+<h2>4. Movimentações e inventário</h2>
+<h3>Entrada de material</h3>
+<p>Abra <strong>Movimentações → Entrada</strong>, escolha o produto e o depósito, informe quantidade e motivo e confirme. A operação aumenta o saldo e registra o histórico.</p>
+<h3>Saída e consumo</h3>
+<p>Abra <strong>Movimentações → Saída</strong>, selecione o produto e a quantidade e, quando aplicável, associe a retirada à obra, centro de custo, departamento ou responsável. Confira antes de confirmar.</p>
+<h3>Transferências e ajustes</h3>
+<p>Use <strong>Transferência</strong> para deslocar materiais entre depósitos e <strong>Ajuste</strong> para corrigir divergências documentadas. Não utilize ajustes para esconder movimentações de entrada ou saída.</p>
+<h3>Inventário</h3>
+<p>Em <strong>Inventário</strong>, inicie uma contagem, registre as quantidades físicas e confira divergências. O inventário cíclico permite recontagem e ajustes auditáveis na conclusão.</p>
+
+<h2>5. Compras, recebimentos e relatórios</h2>
+<ol>
+<li>Na área <strong>Compras</strong>, crie uma solicitação de compra com os materiais necessários.</li>
+<li>Registre cotações e obtenha as aprovações previstas na política interna.</li>
+<li>Gere o pedido ao fornecedor e, quando a mercadoria chegar, registre o <strong>recebimento</strong>.</li>
+<li>Confira quantidades, custo e possíveis avarias. Recebimentos parciais podem permanecer pendentes até a entrega restante.</li>
+<li>Use <strong>Dashboard</strong> e <strong>Relatórios</strong> para acompanhar saldos, histórico de movimentações, itens abaixo do mínimo e valores de estoque.</li>
+</ol>
+<p>Também é possível consultar histórico de preços e sugestões de reposição em <strong>Custos e reposição</strong>.</p>
+
+<h2>6. Recursos avançados</h2>
+<table>
+<tr><th>Recurso</th><th>Uso</th></tr>
+<tr><td>WMS / Coletor</td><td>Endereçamento de estoque, leitura de códigos, recebimento, separação e contagens pela rede local.</td></tr>
+<tr><td>Lotes e séries</td><td>Rastreamento de materiais com lote, validade ou número de série quando necessário.</td></tr>
+<tr><td>FIFO / FEFO</td><td>Recomendação de retirada considerando a ordem de entrada ou a validade mais próxima. A confirmação continua obrigatória.</td></tr>
+<tr><td>Patrimônio e ferramentas</td><td>Cadastro, retirada/devolução, responsável, manutenção e documentos associados.</td></tr>
+<tr><td>Qualidade</td><td>Quarentena de itens em inspeção, com liberação ou rejeição controlada.</td></tr>
+<tr><td>Documentos</td><td>Anexos locais vinculados a cadastros e movimentações.</td></tr>
+<tr><td>Gestão P2</td><td>Campos personalizados, matriz de aprovação, kits, manutenção, indicadores e importação de NF-e.</td></tr>
+</table>
+
+<h2>7. Acesso pelo celular e outros computadores</h2>
+<p>O aplicativo no computador principal disponibiliza a interface web na rede local. Em um dispositivo conectado à <strong>mesma rede</strong>, abra o navegador e informe o endereço:</p>
+<div class="step"><code>http://IP-DO-COMPUTADOR-PRINCIPAL:4173</code><p><small>Exemplo ilustrativo: se o IP do computador principal for 192.168.1.50, use http://192.168.1.50:4173.</small></p></div>
+<p>Para descobrir o IP no Windows, abra o Prompt de Comando e digite <code>ipconfig</code>; procure o endereço IPv4 da rede em uso. Caso a conexão falhe, confira se o PC principal está ligado, se ambos estão na mesma rede e se o Firewall permite o acesso local ao aplicativo.</p>
+<div class="warn"><strong>Segurança:</strong> a interface destina-se à rede local confiável. Não encaminhe a porta 4173 diretamente na internet.</div>
+
+<h2>8. Backup, atualização e troca de computador</h2>
+<h3>Faça backup regularmente</h3>
+<p>Em <strong>Configurações</strong>, use a função de <strong>Criar backup</strong> e guarde uma cópia em local seguro. Um backup protege cadastros, movimentações, históricos e documentos incluídos no processo de salvamento.</p>
+<h3>Atualização</h3>
+<p>Quando o aplicativo informar que existe versão nova, verifique o aviso e confirme a atualização quando for conveniente. Use sempre o instalador <strong>Comercial</strong> distribuído pela ArtiSys. Por precaução, faça backup antes de atualizar. As atualizações normais preservam a pasta de dados do usuário.</p>
+<h3>Troca, formatação ou reinstalação</h3>
+<p>Ao reinstalar em outro computador ou após formatar, solicite à ArtiSys um <strong>novo código de ativação</strong> para sua licença existente. O código <strong>não recupera os dados</strong> do estoque. Se a base antiga foi perdida, será necessário restaurar um backup.</p>
+
+<h2>9. Dúvidas frequentes</h2>
+<h3>É necessário manter a internet ligada?</h3>
+<p>Não para a operação normal da edição já ativada. A ativação inicial e as consultas online de licença usam internet; uma instalação anteriormente validada pode continuar operando temporariamente offline conforme a validade conhecida.</p>
+<h3>O código expirou. Preciso comprar novamente?</h3>
+<p>Não necessariamente. Entre em contato com a ArtiSys para solicitar outro código vinculado à licença ativa.</p>
+<h3>O aplicativo abre, mas o celular não acessa?</h3>
+<p>Confira o IP do PC principal, a rede Wi-Fi e o Firewall. O computador principal precisa estar ligado, e o celular precisa alcançar a rede local.</p>
+<h3>Esqueci a senha do administrador local.</h3>
+<p>O código comercial não substitui a senha local. Procure o administrador responsável e o suporte para orientar o procedimento de recuperação adequado.</p>
+
+<h2>10. Suporte ArtiSys</h2>
+<p>Para dúvidas de instalação, ativação ou utilização, responda diretamente ao <strong>e-mail de boas-vindas</strong> recebido da ArtiSys. Informe a versão instalada e descreva o problema. Nunca envie a senha do administrador nem dados confidenciais em texto aberto.</p>
+<p><a href="https://pdv-artisys.sistema-artisys.workers.dev/download/almoxarifado">Download oficial do instalador comercial</a></p>
+<div class="footer">ArtiSys Almoxarifado • Manual oficial do cliente • Edição comercial Windows • Documento informativo; recursos dependem da versão instalada.</div>
+</main></body></html>
