@@ -19,6 +19,7 @@ async function boot(){
     mainWindow.show();
     if(app.isPackaged)void promptForDesktopUpdate({
       currentVersion:app.getVersion(),
+      commercialActivation:edition.commercialActivation===true,
       feedUrl:readUpdateFeedUrl({app}),
       destinationDir:path.join(app.getPath('temp'),'ArtiSys-Almoxarifado-Updates'),
       app,window:mainWindow,dialog,shell
