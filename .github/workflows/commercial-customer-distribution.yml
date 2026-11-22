@@ -1,0 +1,117 @@
+name: Comercial Almoxarifado - Instalador e manual oficial
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/MANUAL-CLIENTE-COMERCIAL.html'
+      - 'scripts/build-commercial-manual.mjs'
+      - 'scripts/build-commercial.mjs'
+      - 'tests/commercial-manual.test.mjs'
+      - '.github/workflows/commercial-customer-distribution.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/commercial-customer-distribution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manual-pdf:
+    name: Gerar manual PDF e validar conteúdo
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependências open source
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+          npx playwright install chromium
+      - name: Validar manual e gerar PDF
+        run: |
+          node --test tests/commercial-manual.test.mjs
+          node scripts/build-commercial-manual.mjs
+          test -s dist/Manual-ArtiSys-Almoxarifado.pdf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manual-almoxarifado-pdf
+          path: dist/Manual-ArtiSys-Almoxarifado.pdf
+          if-no-files-found: error
+          retention-days: 14
+
+  commercial-installer:
+    name: Validar e compilar instalador comercial Windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependências
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+      - name: Verificar domínio, segurança e edição
+        run: |
+          npm run check
+          npm run security
+      - name: Compilar instalador comercial sem alterar a edição livre
+        run: npm run build:win:commercial
+      - name: Verificar instalador e manifesto livre original
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $artifact = "dist/ArtiSys-Almoxarifado-Setup-$($pkg.version)-Commercial.exe"
+          if (-not (Test-Path $artifact)) { throw "Instalador comercial ausente" }
+          if ((Get-Item $artifact).Length -lt 1000000) { throw "Instalador incompleto" }
+          $edition = Get-Content apps/desktop/src/edition.json | ConvertFrom-Json
+          if ($edition.commercialActivation -ne $false) { throw "Manifesto livre foi alterado" }
+          $sha = (Get-FileHash $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  $(Split-Path $artifact -Leaf)" | Out-File -FilePath dist/Commercial-SHA256SUMS.txt -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: almoxarifado-commercial-installer
+          path: |
+            dist/ArtiSys-Almoxarifado-Setup-*-Commercial.exe
+            dist/Commercial-SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publicar arquivos da edição comercial na release oficial existente
+    needs: [manual-pdf, commercial-installer]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: manual-almoxarifado-pdf
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: almoxarifado-commercial-installer
+          path: dist
+      - name: Publicar apenas artefatos comerciais adicionais
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          test -s "dist/ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"
+          test -s dist/Manual-ArtiSys-Almoxarifado.pdf
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$TAG" "dist/ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"             "dist/Manual-ArtiSys-Almoxarifado.pdf" "dist/Commercial-SHA256SUMS.txt"             --clobber --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -F "ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -F 'Manual-ArtiSys-Almoxarifado.pdf'
