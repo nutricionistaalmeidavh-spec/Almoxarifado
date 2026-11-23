@@ -49,7 +49,7 @@ test('não aprova cotação incompleta ou sem custo positivo para todos os itens
   const { repository, purchasing } = fixture();
   const request = purchasing.createRequest({ warehouseId:'w1', requestedBy:'u1', items:[{productId:'p1',quantity:2},{productId:'p2',quantity:3}] });
   assert.throws(() => purchasing.addQuote({ requestId:request.id, supplierId:'s1', userId:'u1', items:[{productId:'p1',quantity:2,unitCost:9}] }), error => error.code === 'QUOTE_ITEMS_MISMATCH');
-  assert.throws(() => purchasing.addQuote({ requestId:request.id, supplierId:'s1', userId:'u1', items:[{productId:'p1',quantity:2,unitCost:9},{productId:'p2',quantity:3,unitCost:0}] }), error => error.code === 'INVALID_NUMBER');
+  assert.throws(() => purchasing.addQuote({ requestId:request.id, supplierId:'s1', userId:'u1', items:[{productId:'p1',quantity:2,unitCost:9},{productId:'p2',quantity:3,unitCost:0}] }), error => error.code === 'INVALID_INPUT');
   assert.equal(repository.getPurchaseRequest(request.id).status, 'REQUESTED');
 });
 
