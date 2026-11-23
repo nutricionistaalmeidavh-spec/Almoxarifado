@@ -1,0 +1,43 @@
+name: Playwright E2E - Fluxos do Almoxarifado
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'src/**'
+      - 'qa/**'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/e2e-functional.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ALMOX_E2E_EVIDENCE: artifacts/e2e-screenshots
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install open-source dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: E2E real browser and SQLite (isolated temp database)
+        run: node --test qa/e2e-functional.mjs
+      - name: Upload evidence (including failed flows)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: almoxarifado-playwright-e2e-evidence
+          path: artifacts/e2e-screenshots/
+          if-no-files-found: warn
+          retention-days: 7
