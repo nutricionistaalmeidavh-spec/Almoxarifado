@@ -5,7 +5,7 @@ const read=(p)=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 
 test('final release workflow validates Linux and installed Windows artifact',async()=>{
   const yml=await read('.github/workflows/release-final.yml');
-  for(const token of ['workflow_dispatch','feat/entregas-21-24','main','windows-latest','ubuntu-latest','actions/setup-node','node-version: 22','npm run check','npm run qa:validate','npm run security','npm run release:check','playwright install chromium','npm run build:win','windows-installed-smoke.ps1','release:manifest','RELEASE_ARTIFACT_REQUIRED','actions/upload-artifact','artisys-almoxarifado-1.0.3','CSC_IDENTITY_AUTO_DISCOVERY']) assert.ok(yml.includes(token),`workflow missing ${token}`);
+  for(const token of ['workflow_dispatch','feat/entregas-21-24','main','windows-latest','ubuntu-latest','actions/setup-node','node-version: 22','npm run check','npm run qa:validate','npm run security','npm run release:check','playwright install chromium','npm run build:win','windows-installed-smoke.ps1','release:manifest','RELEASE_ARTIFACT_REQUIRED','actions/upload-artifact','artisys-almoxarifado-1.0.4','CSC_IDENTITY_AUTO_DISCOVERY']) assert.ok(yml.includes(token),`workflow missing ${token}`);
   assert.ok(!yml.includes('submodules: recursive'),'final workflow must not depend on sibling private submodule');
 });
 
@@ -14,7 +14,7 @@ test('versioned release is published only after verified Windows smoke and SHA-2
   assert.ok(yml.includes('contents: write'),'release job must receive write permission');
   const smoke=yml.indexOf('windows-installed-smoke.ps1');
   const integrity=yml.indexOf('Final artifact release gate');
-  const published=yml.indexOf('gh release create v1.0.3');
+  const published=yml.indexOf('gh release create v1.0.4');
   assert.ok(smoke>0 && integrity>smoke && published>integrity,'release must follow Windows smoke and verified hashes');
   assert.match(yml,/gh release edit v1\.0\.3 --draft=false --latest/);
   assert.match(yml,/release-manifest\.json/);
