@@ -13,7 +13,7 @@ O ArtiSys Almoxarifado continua local-first. Ao abrir uma instalação **empacot
 
 **Canal padrão:** o repositório `nutricionistaalmeidavh-spec/Almoxarifado` está público desde 13/11/2026. O aplicativo consulta automaticamente `https://api.github.com/repos/nutricionistaalmeidavh-spec/Almoxarifado/releases/latest`. Não há necessidade de configurar um serviço externo ou token privado.
 
-**Release v1.0.3:** o workflow `.github/workflows/release-final.yml` publica `v1.0.3` após gates Linux, instalação/reinstalação Windows e verificação de integridade. A release inclui `ArtiSys-Almoxarifado-Setup-1.0.3.exe`, `SHA256SUMS.txt` e `release-manifest.json`.
+**Release v1.0.4:** o workflow `.github/workflows/release-final.yml` publica `v1.0.4` após gates Linux, instalação/reinstalação Windows e verificação de integridade. A release inclui `ArtiSys-Almoxarifado-Setup-1.0.4.exe`, `SHA256SUMS.txt` e `release-manifest.json`.
 
 **Opcional:** para usar um servidor HTTPS próprio ou outro repositório de binários, configure a fonte como explicado abaixo.
 
@@ -21,8 +21,8 @@ Opção B: publicar um arquivo JSON estático em **servidor próprio ou hospedag
 
 ```json
 {
-  "version": "1.0.3",
-  "downloadUrl": "https://seu-servidor.example/downloads/ArtiSys-Almoxarifado-Setup-1.0.3.exe",
+  "version": "1.0.4",
+  "downloadUrl": "https://seu-servidor.example/downloads/ArtiSys-Almoxarifado-Setup-1.0.4.exe",
   "sha256": "COLOQUE_AQUI_O_SHA256_REAL_64_CARACTERES_HEXADECIMAIS",
   "size": 12345678,
   "notes": "Melhorias e correções."
