@@ -137,6 +137,7 @@ try{
   await reqForm.locator('[name="quantity"]').fill('5');
   await reqForm.locator('[name="notes"]').fill('E2E compra principal');
   await reqForm.locator('button').click();
+  await successNotice('Solicitação criada.');
   const request=await until(async()=>(await state()).purchaseRequests.find(r=>r.notes==='E2E compra principal'),'solicitação cadastrada');
   check('Solicitação de compra criada no navegador',request.status==='REQUESTED');
 
@@ -152,26 +153,27 @@ try{
   await page.locator('#purchase-supplier').selectOption(supplierA.id);
   await page.locator('#purchase-unit-cost-inputs input[name="unitCost_0"]').fill('8.50');
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Cotação registrada.');
   const firstQuote=await until(async()=>(await state()).purchaseRequests.find(r=>r.id===request.id)?.quotes?.[0],'cotação salva');
   check('Cotação por item persistida',firstQuote.items[0].unitCost===8.5);
   await selectAction('approve');
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Solicitação aprovada.');
   await until(async()=>(await state()).purchaseRequests.find(r=>r.id===request.id)?.status==='APPROVED','solicitação aprovada');
   check('Solicitação aprovada depois da cotação',true);
 
   scenario='fornecedor sem cotação é bloqueado';
   await page.locator('#purchase-supplier').selectOption(supplierB.id);
   await selectAction('order');
-  console.log('[DEBUG] fornecedor antes do pedido='+await page.locator('#purchase-supplier').inputValue());
+  check('Fornecedor de teste continua selecionado',await page.locator('#purchase-supplier').inputValue()===supplierB.id);
   await page.locator('#purchase-action-form button').click();
-  await page.waitForTimeout(180);
-  console.log('[DEBUG] sem-cotacao='+JSON.stringify({notice:await page.locator('#message').innerText(),guidance:await page.locator('#purchase-guidance').innerText(),supplier:await page.locator('#purchase-supplier').inputValue(),request:await page.locator('#purchase-request').inputValue(),valid:await page.locator('#purchase-action-form').evaluate(el=>el.checkValidity())}));
   await successNotice('Registre uma cotação');
   check('Pedido de fornecedor sem cotação é recusado',!(await state()).purchaseOrders.some(o=>o.requestId===request.id));
 
   scenario='gerar pedido e conferir recebimento parcial';
   await page.locator('#purchase-supplier').selectOption(supplierA.id);
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Pedido gerado');
   const order=await until(async()=>(await state()).purchaseOrders.find(o=>o.requestId===request.id),'pedido gerado');
   check('Pedido aprovado tem total correto',order.status==='ORDERED'&&order.total===42.5);
   await receipt(order.id,2,1,1,0);
@@ -200,14 +202,17 @@ try{
   await costs.nth(0).fill('6.25');
   await costs.nth(1).fill('9.75');
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Cotação registrada.');
   snapshot=await state();
   const recovered=snapshot.purchaseRequests.find(r=>r.id===legacy.item.id);
   check('Recuperação preserva ID e invalida aprovação antiga',recovered.status==='QUOTED'&&recovered.approvedAt===null&&recovered.quotes.length===1);
   await selectAction('approve');
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Solicitação aprovada.');
   await until(async()=>(await state()).purchaseRequests.find(r=>r.id===legacy.item.id)?.status==='APPROVED','aprovação de legado');
   await selectAction('order');
   await page.locator('#purchase-action-form button').click();
+  await successNotice('Pedido gerado');
   const legacyOrder=await until(async()=>(await state()).purchaseOrders.find(o=>o.requestId===legacy.item.id),'pedido legado');
   check('Pedido legado tem dois itens, quantidades e custos corretos',legacyOrder.items.length===2&&legacyOrder.total===41.75);
 
