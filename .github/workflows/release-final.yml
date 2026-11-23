@@ -1,4 +1,4 @@
-name: Final Release 1.0.3
+name: Final Release 1.0.4
 
 on:
   workflow_dispatch:
@@ -6,8 +6,6 @@ on:
     branches:
       - main
       - feat/entregas-21-24
-    tags:
-      - 'v*'
     paths:
       - '.release-trigger'
 
@@ -20,7 +18,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
-  RELEASE_ARTIFACT: dist/ArtiSys-Almoxarifado-Setup-1.0.3.exe
+  RELEASE_ARTIFACT: dist/ArtiSys-Almoxarifado-Setup-1.0.4.exe
 
 jobs:
   linux-gates:
@@ -128,9 +126,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download v1.0.2 --pattern "ArtiSys-Almoxarifado-Setup-1.0.2.exe" --dir "$env:RUNNER_TEMP"
+          gh release download v1.0.3 --pattern "ArtiSys-Almoxarifado-Setup-1.0.3.exe" --dir "$env:RUNNER_TEMP"
           if ($LASTEXITCODE -ne 0) { throw "Falha ao obter instalador público anterior" }
-          ./scripts/windows-installed-smoke.ps1 -InstallerPath $env:RELEASE_ARTIFACT -PreviousInstallerPath "$env:RUNNER_TEMP/ArtiSys-Almoxarifado-Setup-1.0.2.exe"
+          ./scripts/windows-installed-smoke.ps1 -InstallerPath $env:RELEASE_ARTIFACT -PreviousInstallerPath "$env:RUNNER_TEMP/ArtiSys-Almoxarifado-Setup-1.0.3.exe"
 
       - name: Upload real UI v2 screenshots
         uses: actions/upload-artifact@v4
@@ -150,23 +148,23 @@ jobs:
           RELEASE_ARTIFACT_REQUIRED: '1'
         run: npm run release:check
 
-      - name: Publish verified release v1.0.3 on GitHub
+      - name: Publish verified release v1.0.4 on GitHub
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v1.0.3 "$env:RELEASE_ARTIFACT" "dist/SHA256SUMS.txt" "dist/release-manifest.json" --target "$env:GITHUB_SHA" --title "ArtiSys Almoxarifado v1.0.3" --notes "Corrige a abertura da janela após atualizar. Edição livre, sem ativação. Atualização e persistência dos dados verificadas sobre a versão 1.0.2." --draft
+          gh release create v1.0.4 "$env:RELEASE_ARTIFACT" "dist/SHA256SUMS.txt" "dist/release-manifest.json" --target "$env:GITHUB_SHA" --title "ArtiSys Almoxarifado v1.0.4" --notes "Corrige o fluxo de compras: cotação por produto, recuperação de solicitações antigas aprovadas e mensagens em português. Edição livre, sem ativação. Atualização e persistência verificadas sobre a versão v1.0.3." --draft
           if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a release" }
-          gh release edit v1.0.3 --draft=false --latest
+          gh release edit v1.0.4 --draft=false --latest
           if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar a release validada" }
 
       - name: Upload approved release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: artisys-almoxarifado-1.0.3
+          name: artisys-almoxarifado-1.0.4
           if-no-files-found: error
           retention-days: 30
           path: |
-            dist/ArtiSys-Almoxarifado-Setup-1.0.3.exe
+            dist/ArtiSys-Almoxarifado-Setup-1.0.4.exe
             dist/SHA256SUMS.txt
             dist/release-manifest.json
