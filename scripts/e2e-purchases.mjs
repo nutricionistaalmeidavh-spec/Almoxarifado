@@ -154,11 +154,13 @@ try{
   await page.locator('#purchase-unit-cost-inputs input[name="unitCost_0"]').fill('8.50');
   await page.locator('#purchase-action-form button').click();
   await successNotice('Cotação registrada.');
+  check('Fornecedor é preservado após cotação',await page.locator('#purchase-supplier').inputValue()===supplierA.id);
   const firstQuote=await until(async()=>(await state()).purchaseRequests.find(r=>r.id===request.id)?.quotes?.[0],'cotação salva');
   check('Cotação por item persistida',firstQuote.items[0].unitCost===8.5);
   await selectAction('approve');
   await page.locator('#purchase-action-form button').click();
   await successNotice('Solicitação aprovada.');
+  check('Fornecedor é preservado após aprovação',await page.locator('#purchase-supplier').inputValue()===supplierA.id);
   await until(async()=>(await state()).purchaseRequests.find(r=>r.id===request.id)?.status==='APPROVED','solicitação aprovada');
   check('Solicitação aprovada depois da cotação',true);
 
@@ -186,7 +188,9 @@ try{
   snapshot=await state();
   const completed=snapshot.purchaseOrders.find(o=>o.id===order.id);
   check('Recebimento final fecha pedido e atualiza saldos',completed.status==='RECEIVED'&&snapshot.balances.find(b=>b.productId===productA.id&&b.warehouseId==='main')?.quantity===7);
-  check('Pedido recebido aparece em português',await page.locator('#purchases-table').innerText().then(t=>t.includes('Recebido')&&!t.includes('RECEIVED')));
+  const purchaseTable=await page.locator('#purchases-table').innerText();
+  check('Pedido recebido aparece em português',purchaseTable.includes('Recebido')&&!purchaseTable.includes('RECEIVED'));
+  check('Tabela de compras não mostra objeto JavaScript',!purchaseTable.includes('[object Object]'));
 
   scenario='recuperação de solicitação legada com dois produtos';
   const legacy=await post('/api/purchases/requests',{warehouseId:'main',notes:'LEGADO E2E',items:[{productId:productA.id,quantity:2},{productId:productB.id,quantity:3}]});
@@ -203,12 +207,14 @@ try{
   await costs.nth(1).fill('9.75');
   await page.locator('#purchase-action-form button').click();
   await successNotice('Cotação registrada.');
+  check('Fornecedor do legado é preservado após cotação',await page.locator('#purchase-supplier').inputValue()===supplierB.id);
   snapshot=await state();
   const recovered=snapshot.purchaseRequests.find(r=>r.id===legacy.item.id);
   check('Recuperação preserva ID e invalida aprovação antiga',recovered.status==='QUOTED'&&recovered.approvedAt===null&&recovered.quotes.length===1);
   await selectAction('approve');
   await page.locator('#purchase-action-form button').click();
   await successNotice('Solicitação aprovada.');
+  check('Fornecedor do legado é preservado após aprovação',await page.locator('#purchase-supplier').inputValue()===supplierB.id);
   await until(async()=>(await state()).purchaseRequests.find(r=>r.id===legacy.item.id)?.status==='APPROVED','aprovação de legado');
   await selectAction('order');
   await page.locator('#purchase-action-form button').click();
