@@ -16,7 +16,7 @@ test('versioned release is published only after verified Windows smoke and SHA-2
   const integrity=yml.indexOf('Final artifact release gate');
   const published=yml.indexOf('gh release create v1.0.4');
   assert.ok(smoke>0 && integrity>smoke && published>integrity,'release must follow Windows smoke and verified hashes');
-  assert.match(yml,/gh release edit v1\.0\.3 --draft=false --latest/);
+  assert.match(yml,/gh release edit v1\.0\.4 --draft=false --latest/);
   assert.match(yml,/release-manifest\.json/);
 });
 
@@ -27,6 +27,6 @@ test('final release workflow publishes real UI v2 screenshots as a QA artifact',
 
 test('one-time release trigger documents its purpose',async()=>{
   const trigger=await read('.release-trigger');
-  assert.match(trigger,/1\.0\.3/);
+  assert.match(trigger,/1\.0\.4/);
   assert.match(trigger,/final release/i);
 });
