@@ -47,6 +47,10 @@ function Start-App {
   Write-Host "Starting $exe"
   Start-Process -FilePath $exe | Out-Null
   Wait-Health
+  $license = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/license/status" -TimeoutSec 5
+  if ($license.required -isnot [bool] -or $license.required -or $license.active -ne $true) {
+    throw "O instalador do canal público precisa abrir sem ativação."
+  }
 }
 
 function Stop-App {
