@@ -56,7 +56,7 @@ function flash(message, error = false) {
 function authMessage(message,error=false){$('#auth-message').innerHTML=`<div class="notice ${error?'error':''}">${esc(message)}</div>`;}
 function table(headers, rows) {
   if (!rows?.length) return '<div class="empty">Nenhum registro.</div>';
-  return `<table><thead><tr>${headers.map(([,label])=>`<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${rows.map((row)=>`<tr>${headers.map(([key])=>`<td>${row[key]?.html ? row[key].html : esc(row[key] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return `<table><thead><tr>${headers.map(([,label])=>`<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${rows.map((row)=>`<tr>${headers.map(([key])=>`<td>${row[key] && typeof row[key] === 'object' && Object.hasOwn(row[key], 'html') ? row[key].html : esc(row[key] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 function product(id){return state.products.find((item)=>item.id===id);} function warehouse(id){return state.warehouses.find((item)=>item.id===id);} function supplier(id){return state.suppliers.find((item)=>item.id===id);}
 function option(items,labelFn){return items.filter((x)=>x.active!==false).map((item)=>`<option value="${esc(item.id)}">${esc(labelFn(item))}</option>`).join('');}
@@ -86,7 +86,10 @@ function refreshSelects(){
   const productOptions=option(state.products,(p)=>`${p.sku} — ${p.name}`); const warehouseOptions=option(state.warehouses,(w)=>w.name); const supplierOptions=option(state.suppliers,(s)=>s.name);
   for(const selector of ['#movement-product','#purchase-product','#reservation-product','#advanced-product','#lot-product','#serial-product','#transit-product','#cost-product'])setOptions(selector,productOptions,selector==='#cost-product'?false:true);
   for(const selector of ['#movement-warehouse','#movement-target','#inventory-warehouse','#purchase-warehouse','#reservation-warehouse','#advanced-warehouse','#lot-warehouse','#serial-warehouse','#transit-source','#transit-target'])setOptions(selector,warehouseOptions,selector==='#movement-target');
-  setOptions('#product-category',option(state.categories,(c)=>c.name)); setOptions('#product-supplier',supplierOptions); setOptions('#purchase-supplier',supplierOptions);
+  setOptions('#product-category',option(state.categories,(c)=>c.name)); setOptions('#product-supplier',supplierOptions);
+  const selectedSupplier=$('#purchase-supplier').value;
+  setOptions('#purchase-supplier',supplierOptions);
+  if([...$('#purchase-supplier').options].some(option=>option.value===selectedSupplier))$('#purchase-supplier').value=selectedSupplier;
   setOptions('#movement-cost-center',option(state.costCenters,(x)=>`${x.code} — ${x.name}`)); setOptions('#movement-project',option(state.projects,(x)=>`${x.code} — ${x.name}`)); setOptions('#movement-department',option(state.departments,(x)=>`${x.code} — ${x.name}`));
   setOptions('#serial-lot',option(state.lots,(x)=>`${x.code} — ${product(x.productId)?.name||x.productId}`));
   const previousRequest=$('#purchase-request').value;

@@ -68,3 +68,16 @@ test('interface mantém solicitação aprovada recuperável e traduz erros conhe
   assert.match(app, /'REQUESTED','QUOTED','APPROVED'/);
   assert.match(app, /function updatePurchaseGuidance/);
 });
+
+
+test('usa a última cotação do fornecedor sem perder o histórico', () => {
+  const { repository, purchasing } = fixture();
+  const request=purchasing.createRequest({warehouseId:'w1',requestedBy:'u1',items:[{productId:'p1',quantity:2}]});
+  const original=purchasing.addQuote({requestId:request.id,supplierId:'s1',userId:'u1',items:[{productId:'p1',quantity:2,unitCost:4}]});
+  const revisada=purchasing.addQuote({requestId:request.id,supplierId:'s1',userId:'u1',items:[{productId:'p1',quantity:2,unitCost:5}]});
+  purchasing.approveRequest({requestId:request.id,userId:'u1'});
+  const order=purchasing.createOrder({requestId:request.id,supplierId:'s1',userId:'u1'});
+  assert.equal(order.total,10);
+  assert.equal(order.items[0].unitCost,5);
+  assert.deepEqual(repository.getPurchaseRequest(request.id).quotes.map(x=>x.id),[original.id,revisada.id]);
+});
