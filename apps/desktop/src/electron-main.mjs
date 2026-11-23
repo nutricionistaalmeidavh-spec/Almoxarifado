@@ -14,7 +14,6 @@ async function boot(){
   const address=await runtime.start();
   mainWindow=new BrowserWindow({width:1280,height:820,minWidth:960,minHeight:640,show:false,autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
   mainWindow.webContents.setWindowOpenHandler(()=>({action:'deny'}));
-  await mainWindow.loadURL(`http://127.0.0.1:${address.port}/`);
   mainWindow.once('ready-to-show',()=>{
     mainWindow.show();
     if(app.isPackaged)void promptForDesktopUpdate({
@@ -25,6 +24,7 @@ async function boot(){
       app,window:mainWindow,dialog,shell
     }).catch((error)=>console.warn('Update check failed:',error?.message));
   });
+  await mainWindow.loadURL(`http://127.0.0.1:${address.port}/`);
 }
 
 app.whenReady().then(boot).catch((error)=>{console.error(error);app.quit();});

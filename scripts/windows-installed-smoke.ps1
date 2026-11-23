@@ -45,8 +45,16 @@ function Wait-Health {
 function Start-App {
   $exe = Find-AppExe
   Write-Host "Starting $exe"
-  Start-Process -FilePath $exe | Out-Null
+  $appProcess = Start-Process -FilePath $exe -PassThru
   Wait-Health
+  $deadline = (Get-Date).AddSeconds(45)
+  do {
+    $appProcess.Refresh()
+    if ($appProcess.HasExited) { throw "Desktop process exited before showing its window" }
+    if ($appProcess.MainWindowHandle -ne [IntPtr]::Zero -and $appProcess.MainWindowTitle -match 'Almoxarifado') { return }
+    Start-Sleep -Milliseconds 250
+  } while ((Get-Date) -lt $deadline)
+  throw "Installed application has no visible Almoxarifado window"
 }
 
 function Stop-App {
