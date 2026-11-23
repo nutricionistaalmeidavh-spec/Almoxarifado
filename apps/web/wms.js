@@ -36,29 +36,22 @@ function injectSurface(){
 }
 
 function renderLocations(){const rows=wmsState.locations||[];$('#wms-locations').innerHTML=rows.length?`<table><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Depósito</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${esc(wmsState.warehouses.find(w=>w.id===x.warehouseId)?.name||x.warehouseId)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhum endereço cadastrado.</div>';}
-function replaceOptionsPreservingSelection(select,html){
-  if(!select)return;
-  const selected=select.value;
-  select.innerHTML=html;
-  if(selected && [...select.options].some(option=>option.value===selected))select.value=selected;
-}
 function replaceOptionsPreservingSelection(selector,html){
   document.querySelectorAll(selector).forEach(select=>{
     const selected=select.value;
     select.innerHTML=html;
-    if(Array.from(select.options).some(option=>option.value===selected))select.value=selected;
+    if(selected && [...select.options].some(option=>option.value===selected))select.value=selected;
   });
 }
-function refreshOptions(){const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');replaceOptionsPreservingSelection('.wms-warehouse',warehouses);replaceOptionsPreservingSelection('.wms-product',products);replaceOptionsPreservingSelection('.wms-location',locations);replaceOptionsPreservingSelection('#wms-location-parent',locations);const openOrders=(wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status));replaceOptionsPreservingSelection('#wms-order',options(openOrders,orderLabel,'Pedido de compra'));}
+function refreshOptions(){
   const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');
   const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');
   const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');
-  document.querySelectorAll('.wms-warehouse').forEach(x=>replaceOptionsPreservingSelection(x,warehouses));
-  document.querySelectorAll('.wms-product').forEach(x=>replaceOptionsPreservingSelection(x,products));
-  document.querySelectorAll('.wms-location').forEach(x=>replaceOptionsPreservingSelection(x,locations));
-  replaceOptionsPreservingSelection($('#wms-location-parent'),locations);
-  const openOrders=(wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status));
-  replaceOptionsPreservingSelection($('#wms-order'),options(openOrders,orderLabel,'Pedido de compra'));
+  for(const [selector,html] of [
+    ['.wms-warehouse',warehouses],['.wms-product',products],['.wms-location',locations],
+    ['#wms-location-parent',locations],
+    ['#wms-order',options((wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status)),orderLabel,'Pedido de compra')]
+  ])replaceOptionsPreservingSelection(selector,html);
 }
 async function loadWms(){try{const data=await api('/api/bootstrap');wmsState={...wmsState,...data};refreshOptions();renderLocations();$('#wms-status').textContent=`${wmsState.locations.length} endereços · ${wmsState.stockPositions?.length||0} posições`;return data;}catch(error){flash(error.message,true);}}
 
