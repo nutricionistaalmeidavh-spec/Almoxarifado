@@ -21,7 +21,9 @@ test('package exposes desktop runtime command with pinned Electron', async () =>
 test('installed Windows desktop checks updates only after the window is ready',async()=>{
   const source=await read('apps/desktop/src/electron-main.mjs');
   assert.match(source,/app\.isPackaged/);
-  assert.match(source,/ready-to-show/);
+  const subscribe = source.indexOf("mainWindow.once('ready-to-show'");
+  const navigate = source.indexOf('mainWindow.loadURL(');
+  assert.ok(subscribe >= 0 && subscribe < navigate, 'Register window visibility before navigation starts');
   assert.match(source,/promptForDesktopUpdate/);
   assert.match(source,/readUpdateFeedUrl/);
   assert.match(source,/app\.getVersion\(\)/);
