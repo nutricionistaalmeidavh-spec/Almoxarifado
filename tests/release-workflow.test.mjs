@@ -7,6 +7,7 @@ test('final release workflow validates Linux and installed Windows artifact',asy
   const yml=await read('.github/workflows/release-final.yml');
   for(const token of ['workflow_dispatch','feat/entregas-21-24','main','windows-latest','ubuntu-latest','actions/setup-node','node-version: 22','npm run check','npm run qa:validate','npm run security','npm run release:check','playwright install chromium','npm run build:win','windows-installed-smoke.ps1','release:manifest','RELEASE_ARTIFACT_REQUIRED','actions/upload-artifact','artisys-almoxarifado-1.0.4','CSC_IDENTITY_AUTO_DISCOVERY']) assert.ok(yml.includes(token),`workflow missing ${token}`);
   assert.ok(!yml.includes('submodules: recursive'),'final workflow must not depend on sibling private submodule');
+  assert.doesNotMatch(yml,/^\s+tags:\s*$/m,'publicação de tag não pode disparar uma segunda release');
 });
 
 test('versioned release is published only after verified Windows smoke and SHA-256 gate',async()=>{
