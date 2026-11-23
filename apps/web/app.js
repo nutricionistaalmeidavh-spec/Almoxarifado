@@ -15,6 +15,25 @@ let latestRevision = null;
 let polling = false;
 let state = {dashboard:{},categories:[],suppliers:[],warehouses:[],products:[],balances:[],movements:[],inventories:[],purchaseRequests:[],purchaseOrders:[],receipts:[],costCenters:[],projects:[],departments:[],reservations:[],lots:[],serials:[],transitTransfers:[],priceHistory:[],users:[],user:null};
 
+const PURCHASE_ERRORS_PT_BR = {
+  QUOTE_REQUIRED: 'Registre uma cotação com o custo de cada produto para o fornecedor escolhido antes de aprovar ou gerar o pedido.',
+  QUOTE_ITEMS_MISMATCH: 'A cotação precisa incluir todos os produtos e as quantidades da solicitação.',
+  UNIT_COST_REQUIRED: 'Informe o custo unitário maior que zero para cada produto da cotação.',
+  QUOTE_NOT_FOUND: 'A cotação selecionada não foi encontrada.',
+  QUOTE_SUPPLIER_MISMATCH: 'A cotação informada pertence a outro fornecedor.',
+  PURCHASE_NOT_APPROVED: 'Aprove a solicitação antes de gerar o pedido.',
+  INVALID_PURCHASE_STATUS: 'Esta ação não está disponível para a situação atual da solicitação.',
+  APPROVAL_REQUIRED: 'Esta compra exige aprovação adicional de acordo com as regras configuradas.',
+  INVALID_INPUT: 'Verifique os campos obrigatórios e os valores informados.'
+};
+function localApiMessage(body,status){
+  const code=typeof body?.error==='string'?body.error:'';
+  if(PURCHASE_ERRORS_PT_BR[code])return PURCHASE_ERRORS_PT_BR[code];
+  const raw=typeof body?.message==='string'?body.message:'';
+  if(/^(não |falha |erro |informe |selecione |verifique |senha |usuário )/i.test(raw))return raw;
+  return `Não foi possível concluir a operação. Verifique os dados ou contate o suporte (código: ${esc(code||status)}).`;
+}
+
 async function request(path, options = {}, { publicRequest = false } = {}) {
   const headers = { ...(options.headers || {}) };
   if (options.body && !(options.body instanceof Blob) && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
@@ -25,7 +44,7 @@ async function request(path, options = {}, { publicRequest = false } = {}) {
   if (!response.ok) {
     if (response.status === 423 && !publicRequest) showLicense('Licença inativa ou expirada. Solicite a liberação à ArtiSys.');
     else if (response.status === 401 && !publicRequest) showAuth('login');
-    throw new Error(body?.message || body?.error || `HTTP ${response.status}`);
+    throw new Error(localApiMessage(body,response.status));
   }
   return body;
 }
@@ -43,6 +62,26 @@ function product(id){return state.products.find((item)=>item.id===id);} function
 function option(items,labelFn){return items.filter((x)=>x.active!==false).map((item)=>`<option value="${esc(item.id)}">${esc(labelFn(item))}</option>`).join('');}
 function setOptions(selector, html, blank = true){const el=$(selector);if(el)el.innerHTML=(blank?'<option value="">—</option>':'')+html;}
 
+function updatePurchaseGuidance(){
+  const form=$('#purchase-action-form');
+  const request=state.purchaseRequests.find(item=>item.id===form.elements.requestId.value);
+  const action=form.elements.action.value;
+  const supplierId=form.elements.supplierId.value;
+  const costField=$('#purchase-unit-cost-field');
+  const costs=$('#purchase-unit-cost-inputs');
+  costField.hidden=action!=='quote';
+  if(action==='quote'&&request){
+    costs.innerHTML=request.items.map((item,index)=>`<label class="field">${esc(product(item.productId)?.name||item.productId)} — ${number.format(item.quantity)} unidade(s)<input name="unitCost_${index}" type="number" min="0.01" step="0.01" required placeholder="Custo unitário (R$)"></label>`).join('');
+  }else costs.innerHTML='';
+  const selectedQuote=request?.quotes?.find(quote=>quote.supplierId===supplierId);
+  let guidance='Selecione uma solicitação de compra para continuar.';
+  if(request){
+    if(action==='quote')guidance=request.status==='APPROVED'?'Esta solicitação já estava aprovada. Registre a cotação para recuperá-la; será necessário aprovar novamente.':'Informe o custo de cada item e registre a cotação antes da aprovação.';
+    if(action==='approve')guidance=request.quotes?.length?'Confirme a aprovação da solicitação com a cotação cadastrada.':'Registre primeiro uma cotação com os custos de todos os produtos.';
+    if(action==='order')guidance=request.status!=='APPROVED'?'A solicitação precisa estar aprovada para gerar o pedido.':selectedQuote?'Cotação encontrada. Você pode gerar o pedido deste fornecedor.':'Não há cotação para este fornecedor. Escolha Registrar cotação e informe os custos antes de gerar o pedido.';
+  }
+  $('#purchase-guidance').textContent=guidance;
+}
 function refreshSelects(){
   const productOptions=option(state.products,(p)=>`${p.sku} — ${p.name}`); const warehouseOptions=option(state.warehouses,(w)=>w.name); const supplierOptions=option(state.suppliers,(s)=>s.name);
   for(const selector of ['#movement-product','#purchase-product','#reservation-product','#advanced-product','#lot-product','#serial-product','#transit-product','#cost-product'])setOptions(selector,productOptions,selector==='#cost-product'?false:true);
@@ -50,7 +89,11 @@ function refreshSelects(){
   setOptions('#product-category',option(state.categories,(c)=>c.name)); setOptions('#product-supplier',supplierOptions); setOptions('#purchase-supplier',supplierOptions);
   setOptions('#movement-cost-center',option(state.costCenters,(x)=>`${x.code} — ${x.name}`)); setOptions('#movement-project',option(state.projects,(x)=>`${x.code} — ${x.name}`)); setOptions('#movement-department',option(state.departments,(x)=>`${x.code} — ${x.name}`));
   setOptions('#serial-lot',option(state.lots,(x)=>`${x.code} — ${product(x.productId)?.name||x.productId}`));
-  setOptions('#purchase-request',state.purchaseRequests.filter((r)=>!['RECEIVED'].includes(r.status)).map((r)=>`<option value="${esc(r.id)}">${esc(r.status)} — ${esc(r.id.slice(0,8))}</option>`).join(''));
+  const previousRequest=$('#purchase-request').value;
+  const availableRequests=state.purchaseRequests.filter(r=>['REQUESTED','QUOTED','APPROVED'].includes(r.status));
+  setOptions('#purchase-request',availableRequests.map(r=>`<option value="${esc(r.id)}">${esc(({REQUESTED:'Solicitada',QUOTED:'Cotada',APPROVED:'Aprovada'})[r.status])} — ${esc(r.id.slice(0,8))}</option>`).join(''));
+  if(availableRequests.some(r=>r.id===previousRequest))$('#purchase-request').value=previousRequest;
+  updatePurchaseGuidance();
 }
 
 function render(){
@@ -156,7 +199,30 @@ async function loadInventory(id){selectedInventoryId=id;const {items}=await requ
 $('#close-inventory').addEventListener('click',async()=>{if(!selectedInventoryId)return;try{const result=await request(`/api/inventories/${selectedInventoryId}/close`,{method:'POST',body:'{}'});state=result.bootstrap;selectedInventoryId=null;$('#inventory-count-panel').hidden=true;render();}catch(err){flash(err.message,true);}});
 
 $('#purchase-request-form').addEventListener('submit',async(e)=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{const result=await request('/api/purchases/requests',{method:'POST',body:JSON.stringify({warehouseId:d.warehouseId,items:[{productId:d.productId,quantity:Number(d.quantity)}],notes:d.notes})});state=result.bootstrap;render();flash('Solicitação criada.');}catch(err){flash(err.message,true);}});
-$('#purchase-action-form').addEventListener('submit',async(e)=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{let result;if(d.action==='quote'){const req=state.purchaseRequests.find(r=>r.id===d.requestId);result=await request(`/api/purchases/requests/${d.requestId}/quotes`,{method:'POST',body:JSON.stringify({supplierId:d.supplierId,items:req.items.map(i=>({...i,unitCost:Number(d.unitCost)}))})});}else if(d.action==='approve')result=await request(`/api/purchases/requests/${d.requestId}/approve`,{method:'POST',body:'{}'});else result=await request('/api/purchases/orders',{method:'POST',body:JSON.stringify({requestId:d.requestId,supplierId:d.supplierId})});state=result.bootstrap;render();flash('Fluxo de compra atualizado.');}catch(err){flash(err.message,true);}});
+$('#purchase-action-form').addEventListener('change',(e)=>{if(['requestId','supplierId','action'].includes(e.target.name))updatePurchaseGuidance();});
+$('#purchase-action-form').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const d=Object.fromEntries(new FormData(e.currentTarget));
+  try{
+    const current=state.purchaseRequests.find(r=>r.id===d.requestId);
+    if(!current)throw new Error('Selecione uma solicitação de compra.');
+    let result;
+    if(d.action==='quote'){
+      if(!d.supplierId)throw new Error('Selecione um fornecedor para registrar a cotação.');
+      const items=current.items.map((item,index)=>({...item,unitCost:Number(d[`unitCost_${index}`])}));
+      if(items.some(item=>!Number.isFinite(item.unitCost)||item.unitCost<=0))throw new Error('Informe o custo unitário maior que zero para cada produto.');
+      result=await request(`/api/purchases/requests/${d.requestId}/quotes`,{method:'POST',body:JSON.stringify({supplierId:d.supplierId,items})});
+    }else if(d.action==='approve'){
+      result=await request(`/api/purchases/requests/${d.requestId}/approve`,{method:'POST',body:'{}'});
+    }else{
+      if(!d.supplierId)throw new Error('Selecione um fornecedor para gerar o pedido.');
+      result=await request('/api/purchases/orders',{method:'POST',body:JSON.stringify({requestId:d.requestId,supplierId:d.supplierId})});
+    }
+    state=result.bootstrap;
+    render();
+    flash(d.action==='quote'?'Cotação registrada. Agora aprove a solicitação antes de gerar o pedido.':d.action==='approve'?'Solicitação aprovada. Selecione Gerar pedido para continuar.':'Pedido gerado com sucesso.');
+  }catch(err){flash(err.message,true);}
+});
 const purchaseReceipts=mountPurchaseReceipts({getState:()=>state,request,onSaved:result=>{state=result.bootstrap;render();},notify:flash});
 
 document.querySelectorAll('.management-form').forEach((form)=>form.addEventListener('submit',async(e)=>{e.preventDefault();try{const result=await request(`/api/management/${form.dataset.kind}`,{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});state=result.bootstrap;render();form.reset();}catch(err){flash(err.message,true);}}));
