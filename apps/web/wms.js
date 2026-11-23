@@ -36,7 +36,23 @@ function injectSurface(){
 }
 
 function renderLocations(){const rows=wmsState.locations||[];$('#wms-locations').innerHTML=rows.length?`<table><thead><tr><th>Código</th><th>Nome</th><th>Tipo</th><th>Depósito</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${esc(wmsState.warehouses.find(w=>w.id===x.warehouseId)?.name||x.warehouseId)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhum endereço cadastrado.</div>';}
-function refreshOptions(){const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');document.querySelectorAll('.wms-warehouse').forEach(x=>x.innerHTML=warehouses);document.querySelectorAll('.wms-product').forEach(x=>x.innerHTML=products);document.querySelectorAll('.wms-location').forEach(x=>x.innerHTML=locations);$('#wms-location-parent').innerHTML=locations;const openOrders=(wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status));$('#wms-order').innerHTML=options(openOrders,orderLabel,'Pedido de compra');}
+function replaceOptionsPreservingSelection(select,html){
+  if(!select)return;
+  const selected=select.value;
+  select.innerHTML=html;
+  if(selected && [...select.options].some(option=>option.value===selected))select.value=selected;
+}
+function refreshOptions(){
+  const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');
+  const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');
+  const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');
+  document.querySelectorAll('.wms-warehouse').forEach(x=>replaceOptionsPreservingSelection(x,warehouses));
+  document.querySelectorAll('.wms-product').forEach(x=>replaceOptionsPreservingSelection(x,products));
+  document.querySelectorAll('.wms-location').forEach(x=>replaceOptionsPreservingSelection(x,locations));
+  replaceOptionsPreservingSelection($('#wms-location-parent'),locations);
+  const openOrders=(wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status));
+  replaceOptionsPreservingSelection($('#wms-order'),options(openOrders,orderLabel,'Pedido de compra'));
+}
 async function loadWms(){try{const data=await api('/api/bootstrap');wmsState={...wmsState,...data};refreshOptions();renderLocations();$('#wms-status').textContent=`${wmsState.locations.length} endereços · ${wmsState.stockPositions?.length||0} posições`;return data;}catch(error){flash(error.message,true);}}
 
 function renderCycleLines(lines){const host=$('#wms-cycle-lines');if(!lines?.length){host.innerHTML='<div class="empty">Nenhum item rastreado nos endereços selecionados.</div>';return;}host.innerHTML=`<table><thead><tr><th>Endereço</th><th>Produto</th><th>Status</th><th>Contagem</th></tr></thead><tbody>${lines.map(line=>`<tr><td>${esc(locationName(line.locationId))}</td><td>${esc(productName(line.productId))}</td><td>${esc(line.status)}</td><td>${line.status==='COUNTED'?esc(line.finalQuantity):`<form class="wms-count-line" data-line="${esc(line.id)}" data-action="${line.status==='NEEDS_RECOUNT'?'recount':'count'}"><input name="quantity" type="number" min="0" step="0.001" required placeholder="Qtd."><button class="btn secondary">${line.status==='NEEDS_RECOUNT'?'Recontar':'Contar'}</button></form>`}</td></tr>`).join('')}</tbody></table>`;document.querySelectorAll('.wms-count-line').forEach(form=>form.addEventListener('submit',submitCycleLine));}
