@@ -109,7 +109,7 @@ try{
     await page.locator('#movement-product').selectOption(productId);
     await page.locator('#movement-warehouse').selectOption('main');
     await page.locator('#movement-form input[name="quantity"]').fill('3');
-    await page.locator('#movement-form input[name="reason"]').fill('QA release 1.0.2');
+    await page.locator('#movement-form input[name="reason"]').fill('QA release 1.0.3');
     await page.locator('#movement-form button').click();
     await page.locator('#movements-table').filter({hasText:`Produto ${sku}`}).waitFor({state:'visible',timeout:20_000});
   }

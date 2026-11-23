@@ -1,17 +1,5 @@
-name: Comercial Almoxarifado - Instalador e manual oficial
+name: Comercial Almoxarifado - QA interno
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'docs/MANUAL-CLIENTE-COMERCIAL.html'
-      - 'scripts/build-commercial-manual.mjs'
-      - 'scripts/build-commercial.mjs'
-      - 'tests/commercial-manual.test.mjs'
-      - '.github/workflows/commercial-customer-distribution.yml'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/commercial-customer-distribution.yml'
   workflow_dispatch:
 
 permissions:
@@ -84,34 +72,3 @@ jobs:
             dist/Commercial-SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
-
-  publish:
-    name: Publicar arquivos da edição comercial na release oficial existente
-    needs: [manual-pdf, commercial-installer]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: manual-almoxarifado-pdf
-          path: dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: almoxarifado-commercial-installer
-          path: dist
-      - name: Publicar apenas artefatos comerciais adicionais
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-          test -s "dist/ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"
-          test -s dist/Manual-ArtiSys-Almoxarifado.pdf
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
-          gh release upload "$TAG" "dist/ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"             "dist/Manual-ArtiSys-Almoxarifado.pdf" "dist/Commercial-SHA256SUMS.txt"             --clobber --repo "$GITHUB_REPOSITORY"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -F "ArtiSys-Almoxarifado-Setup-$VERSION-Commercial.exe"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -F 'Manual-ArtiSys-Almoxarifado.pdf'

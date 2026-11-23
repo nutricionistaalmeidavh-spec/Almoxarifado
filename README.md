@@ -2,7 +2,7 @@
 
 Sistema local-first de almoxarifado. O PC Windows atua como host principal e serve a PWA/API para desktop, celular e tablet na mesma LAN. O núcleo não depende de cloud nem de serviço pago.
 
-**Release atual:** `1.0.2` — Windows x64 — `ArtiSys-Almoxarifado-Setup-1.0.2.exe`. Publicada em [Releases](https://github.com/nutricionistaalmeidavh-spec/Almoxarifado/releases).
+**Release atual:** `1.0.3` — Windows x64 — `ArtiSys-Almoxarifado-Setup-1.0.3.exe`. Publicada em [Releases](https://github.com/nutricionistaalmeidavh-spec/Almoxarifado/releases).
 
 O produto é distribuído **sem sistema de licença**, chave, ativação, limite por máquina, assinatura obrigatória ou servidor de licença.
 
@@ -54,7 +54,7 @@ Instalações Windows empacotadas consultam as releases públicas ao abrir; quan
 
 ### 21 — Instalador e atualização
 - Electron + NSIS para **Windows x64**.
-- Artefato atual: `ArtiSys-Almoxarifado-Setup-1.0.2.exe`.
+- Artefato atual: `ArtiSys-Almoxarifado-Setup-1.0.3.exe`.
 - Instalação por usuário com atalhos.
 - Runtime completo empacotado: o usuário não precisa instalar Node.js.
 - Dados ficam separados da pasta de instalação.

@@ -1,5 +1,6 @@
 param(
-  [string]$InstallerPath = "dist\ArtiSys-Almoxarifado-Setup-1.0.2.exe",
+  [string]$InstallerPath = "dist\ArtiSys-Almoxarifado-Setup-1.0.3.exe",
+  [string]$PreviousInstallerPath,
   [string]$BaseUrl = "http://127.0.0.1:4173"
 )
 
@@ -11,8 +12,9 @@ if (-not $env:ALMOX_QA_SKU) { $env:ALMOX_QA_SKU = 'QA-RELEASE-100' }
 $env:ALMOX_BASE_URL = $BaseUrl
 
 function Install-App {
-  Write-Host "Installing $installer"
-  $process = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+  param([string]$Setup = $installer)
+  Write-Host "Installing $Setup"
+  $process = Start-Process -FilePath $Setup -ArgumentList '/S' -Wait -PassThru
   if ($process.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($process.ExitCode)" }
 }
 
@@ -43,10 +45,16 @@ function Wait-Health {
 }
 
 function Start-App {
+  param([switch]$PreviousVersion)
   $exe = Find-AppExe
   Write-Host "Starting $exe"
   $appProcess = Start-Process -FilePath $exe -PassThru
   Wait-Health
+  if ($PreviousVersion) { return }
+  $license = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/license/status" -TimeoutSec 5
+  if ($license.required -isnot [bool] -or $license.required -or $license.active -ne $true) {
+    throw "O instalador do canal público precisa abrir sem ativação."
+  }
   $deadline = (Get-Date).AddSeconds(45)
   do {
     $appProcess.Refresh()
@@ -70,9 +78,15 @@ function Run-Smoke {
 }
 
 try {
+  if ($PreviousInstallerPath) {
+    Install-App -Setup (Resolve-Path $PreviousInstallerPath).Path
+    Start-App -PreviousVersion
+    Run-Smoke
+    Stop-App
+  }
   Install-App
   Start-App
-  Run-Smoke
+  Run-Smoke -VerifyOnly:([bool]$PreviousInstallerPath)
   Stop-App
 
   # Reinstall the exact same approved package. User data is deliberately not removed.

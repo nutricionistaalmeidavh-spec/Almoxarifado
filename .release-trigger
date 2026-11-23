@@ -1,9 +1,2 @@
-ArtiSys Almoxarifado v1.0.2 — Windows x64 — final release gatilhada pela main
-source: main após merge da PR de release/v1.0.2-20261119
-changes: editar, desativar/reativar e excluir materiais com proteção de histórico e persistência SQLite/JSON
-checks: Node, QA, security, Windows NSIS, Playwright smoke, instalação/reinstalação, SHA-256
-publish: release pública somente após aprovação integral dos gates
-artifacts: ArtiSys-Almoxarifado-Setup-1.0.2.exe, SHA256SUMS.txt, release-manifest.json
-channel: GitHub Releases /releases/latest
-
-retry: v1.0.2 — Playwright submit locator aligned with Editar/Cancelar controls; GitHub Actions smoke and SHA-256 gates required
+ArtiSys Almoxarifado v1.0.3 — Windows x64 — final release
+Correção da abertura da janela. Atualização livre, com teste sobre a instalação 1.0.2.
