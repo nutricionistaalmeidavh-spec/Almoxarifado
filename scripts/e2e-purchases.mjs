@@ -162,7 +162,10 @@ try{
   scenario='fornecedor sem cotação é bloqueado';
   await page.locator('#purchase-supplier').selectOption(supplierB.id);
   await selectAction('order');
+  console.log('[DEBUG] fornecedor antes do pedido='+await page.locator('#purchase-supplier').inputValue());
   await page.locator('#purchase-action-form button').click();
+  await page.waitForTimeout(180);
+  console.log('[DEBUG] sem-cotacao='+JSON.stringify({notice:await page.locator('#message').innerText(),guidance:await page.locator('#purchase-guidance').innerText(),supplier:await page.locator('#purchase-supplier').inputValue(),request:await page.locator('#purchase-request').inputValue(),valid:await page.locator('#purchase-action-form').evaluate(el=>el.checkValidity())}));
   await successNotice('Registre uma cotação');
   check('Pedido de fornecedor sem cotação é recusado',!(await state()).purchaseOrders.some(o=>o.requestId===request.id));
 
@@ -230,7 +233,8 @@ try{
   await screenshot('fluxo-compras-concluido');
   await browser.close();browser=null;page=null;
   await runtime.stop();
-  await runtime.start();
+  const restarted=await runtime.start();
+  base='http://127.0.0.1:'+restarted.port;
   const login=await fetch(base+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({login:'admin',password})});
   check('Banco e usuário persistem após reiniciar',login.status===200);
   const newToken=(await login.json()).token;
