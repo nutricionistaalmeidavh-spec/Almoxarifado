@@ -89,6 +89,7 @@ try{
   await page.locator('#auth-form input[name="password"]').fill(password);
   await page.locator('#auth-form button').click();
   await page.locator('#app-shell').waitFor({state:'visible',timeout:15000});
+  await page.locator('#connection-status').filter({hasText:'Servidor local conectado'}).waitFor({state:'visible',timeout:15000});
   token=await page.evaluate(()=>sessionStorage.getItem('almox-token'));
   check('Primeiro acesso e login reais pelo navegador',!!token);
 
@@ -96,9 +97,11 @@ try{
   await page.locator('button[data-view="cadastros"]').click();
   await page.locator('#supplier-form input[name="name"]').fill('Fornecedor E2E A');
   await page.locator('#supplier-form button').click();
+  await page.locator('#purchase-supplier option').filter({hasText:'Fornecedor E2E A'}).waitFor({state:'attached'});
   await until(async()=>(await state()).suppliers.some(s=>s.name==='Fornecedor E2E A'),'fornecedor A');
   await page.locator('#supplier-form input[name="name"]').fill('Fornecedor E2E B');
   await page.locator('#supplier-form button').click();
+  await page.locator('#purchase-supplier option').filter({hasText:'Fornecedor E2E B'}).waitFor({state:'attached'});
   await until(async()=>(await state()).suppliers.some(s=>s.name==='Fornecedor E2E B'),'fornecedor B');
   for(const [sku,name,cost] of [['QA-001','Tubo QA',12],['QA-002','Conexão QA',7]]){
     const form=page.locator('#product-form');
@@ -127,6 +130,7 @@ try{
   await movement.locator('[name="quantity"]').fill('3');
   await movement.locator('[name="reason"]').fill('Estoque inicial QA');
   await movement.locator('button').click();
+  await successNotice('Movimentação registrada.');
   await until(async()=>(await state()).balances.some(b=>b.productId===productA.id&&b.quantity===3),'saldo inicial do produto A');
   check('Entrada manual atualiza saldo e dashboard',true);
 
@@ -197,6 +201,7 @@ try{
   runtime.repository.savePurchaseRequest({...legacy.item,status:'APPROVED',approvedAt:new Date().toISOString(),approvedBy:'admin'});
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('#app-shell').waitFor({state:'visible',timeout:15000});
+  await page.locator('#connection-status').filter({hasText:'Servidor local conectado'}).waitFor({state:'visible',timeout:15000});
   await page.locator('button[data-view="compras"]').click();
   await page.locator('#purchase-request').selectOption(legacy.item.id);
   await selectAction('quote');
