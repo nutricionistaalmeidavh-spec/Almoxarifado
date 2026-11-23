@@ -54,6 +54,7 @@ async function fetchJson(url,fetchImpl,signal){
 export async function checkForUpdate({currentVersion,feedUrl=DEFAULT_UPDATE_FEED_URL,commercialActivation=false,fetchImpl=fetch,timeoutMs=8000}={}){
   try{
     if(!VERSION.test(String(currentVersion)))return {status:'unavailable'};
+    if(commercialActivation && new URL(feedUrl).href===DEFAULT_UPDATE_FEED_URL)return {status:'unavailable'};
     const signal=AbortSignal.timeout(timeoutMs);
     const source=await fetchJson(feedUrl,fetchImpl,signal);
     let candidate;

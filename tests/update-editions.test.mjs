@@ -14,13 +14,13 @@ const fetchFeed=release=>async()=>new Response(JSON.stringify(release),{headers:
 
 test('comercial nunca instala atualização livre quando release só contém livre',async()=>{
  const release={tag_name:'v2.0.0',assets:[asset(false)]};
- const result=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,fetchImpl:fetchFeed(release)});
+ const result=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,feedUrl:'https://example.org/commercial/feed.json',fetchImpl:fetchFeed(release)});
  assert.equal(result.status,'unavailable');
 });
 
 test('release com as duas edições escolhe o executável correto e preserva SHA256',async()=>{
  const release={tag_name:'v2.0.0',assets:[asset(false),asset(true)]};
- const commercial=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,fetchImpl:fetchFeed(release)});
+ const commercial=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,feedUrl:'https://example.org/commercial/feed.json',fetchImpl:fetchFeed(release)});
  const free=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:false,fetchImpl:fetchFeed(release)});
  assert.equal(commercial.status,'available');assert.equal(free.status,'available');
  assert.equal(commercial.commercialActivation,true);assert.equal(free.commercialActivation,false);
@@ -37,6 +37,13 @@ test('release com as duas edições escolhe o executável correto e preserva SHA
 
 test('feeds externos e URLs de binários não podem trocar a edição',async()=>{
  const feed={version:'2.0.0',downloadUrl:root+name(false),sha256:hash,size:9};
- assert.equal((await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,fetchImpl:fetchFeed(feed)})).status,'unavailable');
+ assert.equal((await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,feedUrl:'https://example.org/commercial/feed.json',fetchImpl:fetchFeed(feed)})).status,'unavailable');
  assert.equal((await checkForUpdate({currentVersion:'1.0.2',commercialActivation:false,fetchImpl:fetchFeed({...feed,downloadUrl:root+name(true)})})).status,'unavailable');
+});
+
+test('edição comercial sem canal próprio não consulta o feed público',async()=>{
+ let calls=0;
+ const result=await checkForUpdate({currentVersion:'1.0.2',commercialActivation:true,fetchImpl:async()=>{calls++;return fetchFeed({})();}});
+ assert.equal(result.status,'unavailable');
+ assert.equal(calls,0);
 });
