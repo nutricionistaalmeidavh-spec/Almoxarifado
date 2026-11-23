@@ -240,10 +240,10 @@ test('full purchasing workflow with quote, approval, partial and final receipt',
   const req = state.purchaseRequests[0];
   assert.equal(req.status,'REQUESTED');
   const form = page.locator('#purchase-action-form');
+  await form.locator('[name="action"]').selectOption('quote');
   await form.locator('[name="requestId"]').selectOption(req.id);
   await form.locator('[name="supplierId"]').selectOption(supplier.id);
   await form.locator('[name="unitCost_0"]').fill('12');
-  await form.locator('[name="action"]').selectOption('quote');
   await form.getByRole('button',{name:'Executar'}).click();
   await message(page,'Cotação registrada.');
   assert.equal((await snapshot(page,base)).purchaseRequests.find(x => x.id === req.id).status,'QUOTED');
