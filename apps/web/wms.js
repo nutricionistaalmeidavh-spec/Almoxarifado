@@ -42,7 +42,14 @@ function replaceOptionsPreservingSelection(select,html){
   select.innerHTML=html;
   if(selected && [...select.options].some(option=>option.value===selected))select.value=selected;
 }
-function refreshOptions(){
+function replaceOptionsPreservingSelection(selector,html){
+  document.querySelectorAll(selector).forEach(select=>{
+    const selected=select.value;
+    select.innerHTML=html;
+    if(Array.from(select.options).some(option=>option.value===selected))select.value=selected;
+  });
+}
+function refreshOptions(){const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');replaceOptionsPreservingSelection('.wms-warehouse',warehouses);replaceOptionsPreservingSelection('.wms-product',products);replaceOptionsPreservingSelection('.wms-location',locations);replaceOptionsPreservingSelection('#wms-location-parent',locations);const openOrders=(wmsState.purchaseOrders||[]).filter(x=>['ORDERED','PARTIALLY_RECEIVED'].includes(x.status));replaceOptionsPreservingSelection('#wms-order',options(openOrders,orderLabel,'Pedido de compra'));}
   const warehouses=options(wmsState.warehouses,x=>`${x.code} — ${x.name}`,'Depósito');
   const products=options(wmsState.products,x=>`${x.sku} — ${x.name}`,'Produto');
   const locations=options(wmsState.locations,x=>`${x.code} — ${x.name}`,'Endereço');
