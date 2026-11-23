@@ -411,7 +411,7 @@ test('WMS mobile: address, barcode scan, receive, pick recommendation, pick and 
   const count=page.locator('.wms-count-line').first();
   await count.locator('[name="quantity"]').fill('3');
   await count.getByRole('button',{name:'Contar'}).click();
-  await page.locator('#wms-cycle-lines').getByText('COUNTED').waitFor();
+  await page.locator('#wms-cycle-lines').getByText('Contado',{exact:true}).waitFor();
   await page.locator('#wms-cycle-close').click();
   await message(page,'Contagem cíclica fechada.');
   const final=await snapshot(page,base);
